@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daber — Speak Hebrew</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Frank+Ruhl+Libre:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sand:#f5efe3; --paper:#fffdf8; --ink:#1c2230; --muted:#6b6f7a; --line:#e6dccb;
+  --blue:#1f3fa3; --blue-d:#162f7c; --blue-soft:#e7ecf9;
+  --olive:#5f6f2e; --olive-soft:#eef1e1;
+  --good:#23824f; --good-soft:#e2f3e9; --warn:#b97a10; --warn-soft:#fbf0d9; --bad:#b8392b; --bad-soft:#f9e3df;
+  --r:16px; --shadow:0 1px 2px rgba(28,34,48,.06),0 6px 20px rgba(28,34,48,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--sand);color:var(--ink);font-family:Rubik,system-ui,sans-serif;font-size:16px;line-height:1.45}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:disabled{opacity:.45;cursor:default}
+.he{font-family:"Frank Ruhl Libre",Rubik,serif;direction:rtl;unicode-bidi:isolate}
+.wrap{max-width:760px;margin:0 auto;padding:0 18px 80px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0 10px}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand .he{font-size:30px;font-weight:700;color:var(--blue)}
+.brand span.en{font-weight:600;letter-spacing:.02em}
+.top-actions{display:flex;gap:8px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--paper);border:1px solid var(--line);font-size:14px}
+.iconbtn{width:40px;height:40px;border-radius:12px;background:var(--paper);border:1px solid var(--line);display:grid;place-items:center}
+.iconbtn:hover{border-color:#cfc3ad}
+.banner{border-radius:12px;padding:12px 14px;margin:8px 0;font-size:14px;border:1px solid}
+.banner.warn{background:var(--warn-soft);border-color:#efd9a8}
+.banner.info{background:var(--blue-soft);border-color:#cdd6f1}
+.hero{margin:14px 0 18px}
+.hero h1{font-size:28px;line-height:1.15;margin:0 0 6px}
+.hero p{margin:0;color:var(--muted)}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.review{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;margin-bottom:18px}
+.review h3{margin:0 0 2px;font-size:17px}
+.review p{margin:0;color:var(--muted);font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:12px;font-weight:600;transition:transform .05s}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.primary:hover:not(:disabled){background:var(--blue-d)}
+.btn.ghost{background:var(--paper);border:1px solid var(--line)}
+.btn.ghost:hover:not(:disabled){border-color:#cfc3ad}
+.btn.good{background:var(--good);color:#fff}
+.btn.small{padding:7px 12px;font-size:14px;border-radius:10px}
+.levels{display:grid;gap:12px}
+.level{display:flex;gap:14px;align-items:center;padding:14px 16px;text-align:left;width:100%}
+.level:hover:not(.locked){border-color:#cfc3ad}
+.level.locked{opacity:.55;cursor:default}
+.lvnum{flex:none;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-weight:700;font-size:18px;background:var(--blue-soft);color:var(--blue)}
+.level.done .lvnum{background:var(--good-soft);color:var(--good)}
+.lvbody{flex:1;min-width:0}
+.lvbody h3{margin:0;font-size:17px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.lvbody h3 .he{font-size:18px;color:var(--muted);font-weight:500}
+.lvbody p{margin:2px 0 8px;color:var(--muted);font-size:14px}
+.bar{height:6px;border-radius:6px;background:#efe7d8;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--olive);border-radius:6px;transition:width .3s}
+.steps-mini{display:flex;gap:6px;margin-top:8px;font-size:12px;color:var(--muted)}
+.steps-mini span{padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+.steps-mini span.ok{background:var(--good-soft);border-color:#bfe2cc;color:var(--good)}
+/* lesson */
+.lesson-head{display:flex;align-items:center;gap:12px;margin:8px 0 14px}
+.lesson-head h2{margin:0;font-size:20px}
+.lesson-head .he{color:var(--muted);font-size:18px}
+.tabs{display:flex;gap:6px;background:#ece3d2;padding:4px;border-radius:14px;margin-bottom:16px}
+.tab{flex:1;padding:9px 6px;border-radius:10px;font-weight:600;font-size:14px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.tab.active{background:var(--paper);color:var(--ink);box-shadow:var(--shadow)}
+.tab .ck{color:var(--good)}
+.stage{padding:22px 20px;text-align:center;position:relative}
+.counter{font-size:13px;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between}
+.dots{display:flex;gap:4px;justify-content:center;margin-bottom:16px;flex-wrap:wrap}
+.dots i{width:8px;height:8px;border-radius:50%;background:#e2d8c4}
+.dots i.on{background:var(--blue)}
+.dots i.ok{background:var(--good)}
+.prompt-en{font-size:15px;color:var(--muted);margin-bottom:4px}
+.big-en{font-size:26px;font-weight:600;margin:6px 0 10px}
+.translit{font-size:30px;font-weight:600;color:var(--blue);letter-spacing:.01em;margin:4px 0;word-spacing:.12em}
+.heline{font-size:34px;margin:4px 0 6px}
+.meaning{color:var(--muted);font-size:16px}
+.hint-note{font-size:13px;color:var(--muted);margin-top:4px}
+.controls{display:flex;gap:12px;justify-content:center;align-items:center;margin:22px 0 8px}
+.round{width:52px;height:52px;border-radius:50%;background:var(--paper);border:1px solid var(--line);display:grid;place-items:center}
+.round:hover{border-color:#cfc3ad}
+.mic{width:82px;height:82px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;box-shadow:0 6px 18px rgba(31,63,163,.35);position:relative}
+.mic:hover:not(:disabled){background:var(--blue-d)}
+.mic.listening{background:var(--bad)}
+.mic.listening::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:3px solid rgba(184,57,43,.35);animation:pulse 1.2s infinite}
+@keyframes pulse{0%{transform:scale(.92);opacity:1}100%{transform:scale(1.18);opacity:0}}
+.ctl-labels{display:flex;gap:12px;justify-content:center;font-size:12px;color:var(--muted)}
+.ctl-labels span{width:52px;text-align:center}.ctl-labels span.m{width:82px}
+.interim{min-height:24px;margin-top:8px;color:var(--muted);font-size:18px}
+.fb{margin-top:14px;padding:14px;border-radius:14px;text-align:left}
+.fb.good{background:var(--good-soft)}.fb.close{background:var(--warn-soft)}.fb.bad{background:var(--bad-soft)}
+.fb .verdict{font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.fb.good .verdict{color:var(--good)}.fb.close .verdict{color:var(--warn)}.fb.bad .verdict{color:var(--bad)}
+.score{font-size:13px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.7)}
+.words{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.w{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;background:#fff;border:1px solid var(--line);font-size:15px}
+.w.ok{border-color:#b8dcc6}
+.w.miss{border-color:#e9b3aa;background:#fff6f4}
+.w .t{font-weight:600}
+.w.ok .t{color:var(--good)} .w.miss .t{color:var(--bad)}
+.w .wh{font-size:16px;color:var(--muted)}
+.w button{padding:0 2px;color:var(--blue)}
+.heard{font-size:14px;color:var(--muted);margin-top:6px}
+.heard .he{font-size:17px;color:var(--ink)}
+.tip{font-size:14px;margin-top:6px}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+/* chat */
+.chat{display:flex;flex-direction:column;gap:10px;text-align:left;max-height:none}
+.msg{max-width:84%;padding:10px 14px;border-radius:16px;position:relative}
+.msg.them{background:var(--blue-soft);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--olive-soft);align-self:flex-end;border-bottom-right-radius:4px;text-align:right}
+.msg .who{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:2px}
+.msg .tl{font-weight:600;color:var(--blue);font-size:17px}
+.msg.me .tl{color:var(--olive)}
+.msg .hh{font-size:19px}
+.msg .ee{font-size:13px;color:var(--muted)}
+.msg .play{position:absolute;top:8px;right:8px;color:var(--blue)}
+.msg.them{padding-right:38px}
+.your-turn{margin-top:14px;padding:14px;border:1px dashed #cfc3ad;border-radius:14px;text-align:center}
+.your-turn .lbl{font-size:13px;color:var(--muted);margin-bottom:4px}
+.model{margin-top:10px;padding:10px;border-radius:12px;background:#fff;border:1px solid var(--line)}
+.done-box{padding:26px 18px;text-align:center}
+.done-box h3{font-size:22px;margin:6px 0}
+.big-check{width:64px;height:64px;border-radius:50%;background:var(--good-soft);color:var(--good);display:grid;place-items:center;margin:0 auto}
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(28,34,48,.35);display:flex;align-items:flex-start;justify-content:center;padding:40px 14px;overflow:auto;z-index:20}
+.modal{width:100%;max-width:520px;padding:20px}
+.modal h2{margin:0 0 12px;font-size:20px;display:flex;justify-content:space-between;align-items:center}
+.field{margin:14px 0}
+.field label.l{display:block;font-weight:600;margin-bottom:6px;font-size:14px}
+.field .help{font-size:13px;color:var(--muted);margin-top:4px}
+.seg{display:flex;background:#ece3d2;border-radius:12px;padding:3px;gap:3px}
+.seg button{flex:1;padding:8px;border-radius:9px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button.on{background:var(--paper);color:var(--ink);box-shadow:var(--shadow)}
+input[type=text],select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-family:inherit;font-size:15px;background:#fff;color:var(--ink)}
+textarea{min-height:70px;font-size:12px;font-family:ui-monospace,monospace}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sw{width:46px;height:26px;border-radius:999px;background:#d9cfbd;position:relative;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on{background:var(--blue)}.sw.on::after{left:23px}
+hr.sep{border:none;border-top:1px solid var(--line);margin:18px 0}
+.kbd{font-size:12px;color:var(--muted);margin-top:10px}
+.kbd b{font-family:ui-monospace,monospace;background:#fff;border:1px solid var(--line);border-radius:5px;padding:0 5px;font-weight:500}
+/* teacher */
+.tstage{padding:18px 18px 20px}
+.tstart{text-align:center;padding:14px 6px 6px}
+.tstart h3{font-size:21px;margin:10px 0 6px}
+.tstart p{color:var(--muted);margin:0 auto 16px;max-width:520px}
+.tcard{text-align:center;padding:14px 10px 6px;min-height:150px}
+.tlabel{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;margin-bottom:6px}
+.qmark{font-size:40px;color:#cfc3ad;font-weight:700}
+.tinterim{min-height:24px;color:var(--muted);font-size:18px;margin-top:4px}
+.tstatus{display:flex;align-items:center;justify-content:center;gap:10px;margin:10px auto 4px;padding:9px 16px;border-radius:999px;font-weight:600;font-size:15px;width:max-content;max-width:100%;background:#efe7d8;color:var(--muted)}
+.tstatus.speaking{background:var(--blue-soft);color:var(--blue)}
+.tstatus.listening{background:var(--bad-soft);color:var(--bad)}
+.tstatus.paused{background:var(--warn-soft);color:var(--warn);white-space:normal;text-align:center;border-radius:14px}
+.tstatus:empty{display:none}
+.recdot{width:12px;height:12px;border-radius:50%;background:var(--bad);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.eq{display:inline-flex;gap:3px;align-items:flex-end;height:16px}
+.eq i{width:4px;background:var(--blue);border-radius:2px;animation:eq .9s infinite ease-in-out}
+.eq i:nth-child(2){animation-delay:.15s}.eq i:nth-child(3){animation-delay:.3s}
+@keyframes eq{0%,100%{height:4px}50%{height:16px}}
+.tctl{display:flex;gap:10px;justify-content:center;margin:12px 0 14px}
+.tctl .btn{min-width:96px}
+.feed{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow-y:auto;padding:12px;border-top:1px solid var(--line);background:#fbf8f1;border-radius:0 0 12px 12px;margin:0 -18px -20px;scroll-behavior:smooth}
+.feed:empty{display:none}
+.msg.teach{background:#fff;border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px;font-size:15px}
+.msg.teach .hx b{color:var(--blue);white-space:nowrap} .msg.teach .hx .he{font-size:17px} .msg.teach .hx i{color:var(--muted);font-size:13px}
+.feed .msg.them{padding-right:14px}
+.vk{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-size:12px;font-weight:700;margin-right:6px;color:#fff}
+.vk.good{background:var(--good)}.vk.close{background:var(--warn)}.vk.bad{background:var(--bad)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+@media (max-width:520px){
+  .translit{font-size:25px}.heline{font-size:28px}.big-en{font-size:22px}
+  .tab{font-size:12.5px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="he">דַּבֵּר</span><span class="en">Daber</span></div>
+    <div class="top-actions">
+      <span class="chip" id="streakChip" title="Days in a row you practiced"></span>
+      <button class="iconbtn" id="settingsBtn" aria-label="Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+  <div id="banners"></div>
+  <main id="app"></main>
+</div>
+<div id="modalRoot"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   CURRICULUM
+   Phrase: [hebrew, transliteration, english, femaleHebrew?, femaleTranslit?]
+   Female variants are used when the learner speaks as a woman.
+   Stressed syllable is in CAPS.
+   ========================================================= */
+const LEVELS = [
+{ title:"First Words", he:"מילים ראשונות", desc:"Greetings, thanks and the words you’ll use every day.",
+  phrases:[
+    ["שלום","sha-LOM","Hello / goodbye"],
+    ["בוקר טוב","BO-ker tov","Good morning"],
+    ["ערב טוב","E-rev tov","Good evening"],
+    ["לילה טוב","LAI-la tov","Good night"],
+    ["תודה","to-DA","Thank you"],
+    ["תודה רבה","to-DA ra-BA","Thank you very much"],
+    ["בבקשה","be-va-ka-SHA","Please / you’re welcome"],
+    ["כן","ken","Yes"],
+    ["לא","lo","No"],
+    ["סליחה","sli-CHA","Excuse me / sorry"],
+    ["להתראות","le-hit-ra-OT","See you / goodbye"]
+  ],
+  talk:{ partner:"Dani", role:"barista", g:"m", scene:"Ordering your morning coffee.", steps:[
+    {p:["שלום!","sha-LOM!","Hello!"], a:["שלום","היי","בוקר טוב"], m:["שלום","sha-LOM","Hello"]},
+    {p:["בוקר טוב!","BO-ker tov!","Good morning!"], a:["בוקר טוב","בוקר אור"], m:["בוקר טוב","BO-ker tov","Good morning"]},
+    {p:["הנה הקפה שלך.","HI-ne ha-ka-FE shel-CHA.","Here’s your coffee."], pf:["הנה הקפה שלך.","HI-ne ha-ka-FE sha-LACH.","Here’s your coffee."], a:["תודה","תודה רבה"], m:["תודה רבה","to-DA ra-BA","Thank you very much"]},
+    {p:["בבקשה. יום טוב!","be-va-ka-SHA. yom tov!","You’re welcome. Have a good day!"], a:["להתראות","תודה","גם לך","שלום","ביי","יום טוב"], m:["להתראות","le-hit-ra-OT","Goodbye"]}
+  ]}
+},
+{ title:"Meeting People", he:"להכיר אנשים", desc:"Say how you are, give your name, and ask about others.",
+  phrases:[
+    ["מה נשמע?","ma nish-MA?","How’s it going?"],
+    ["מה שלומך?","ma shlom-CHA?","How are you? (to a man)"],
+    ["הכל טוב","ha-KOL tov","All good"],
+    ["בסדר","be-SE-der","Fine / OK"],
+    ["טוב מאוד, תודה","tov me-OD, to-DA","Very well, thanks"],
+    ["איך קוראים לך?","eich kor-IM le-CHA?","What’s your name? (to a man)"],
+    ["קוראים לי {name}","kor-IM li {name}","My name is {name}"],
+    ["נעים מאוד","na-IM me-OD","Nice to meet you"],
+    ["אני גר בישראל","a-NI gar be-yis-ra-EL","I live in Israel","אני גרה בישראל","a-NI ga-RA be-yis-ra-EL"],
+    ["גם אני","gam a-NI","Me too"]
+  ],
+  talk:{ partner:"Noa", role:"new neighbor", g:"f", scene:"Meeting your neighbor in the stairwell.", steps:[
+    {p:["היי, מה נשמע?","hai, ma nish-MA?","Hi, how’s it going?"], a:["הכל טוב","בסדר","טוב מאוד","טוב"], m:["הכל טוב, תודה","ha-KOL tov, to-DA","All good, thanks"]},
+    {p:["איך קוראים לך?","eich kor-IM le-CHA?","What’s your name?"], pf:["איך קוראים לך?","eich kor-IM LACH?","What’s your name?"], a:["קוראים לי","שמי"], m:["קוראים לי {name}","kor-IM li {name}","My name is {name}"]},
+    {p:["נעים מאוד, אני נועה.","na-IM me-OD, a-NI NO-a.","Nice to meet you, I’m Noa."], a:["נעים מאוד","גם לי"], m:["נעים מאוד","na-IM me-OD","Nice to meet you"]},
+    {p:["אתה גר בישראל?","a-TA gar be-yis-ra-EL?","Do you live in Israel?"], pf:["את גרה בישראל?","at ga-RA be-yis-ra-EL?","Do you live in Israel?"], a:["כן","אני גר בישראל","לא"], af:["כן","אני גרה בישראל","לא"], m:["כן, אני גר בישראל","ken, a-NI gar be-yis-ra-EL","Yes, I live in Israel"], mf:["כן, אני גרה בישראל","ken, a-NI ga-RA be-yis-ra-EL","Yes, I live in Israel"]},
+    {p:["גם אני! להתראות!","gam a-NI! le-hit-ra-OT!","Me too! See you!"], a:["להתראות","ביי","שלום","יום טוב"], m:["להתראות","le-hit-ra-OT","See you"]}
+  ]}
+},
+{ title:"Survival Phrases", he:"משפטי הישרדות", desc:"What to say when you don’t understand — the most useful level of all.",
+  phrases:[
+    ["אני לא מבין","a-NI lo me-VIN","I don’t understand","אני לא מבינה","a-NI lo me-vi-NA"],
+    ["לאט יותר, בבקשה","le-AT yo-TER, be-va-ka-SHA","Slower, please"],
+    ["אפשר לחזור על זה?","ef-SHAR la-cha-ZOR al ze?","Can you repeat that?"],
+    ["אני מדבר קצת עברית","a-NI me-da-BER ktsat iv-RIT","I speak a little Hebrew","אני מדברת קצת עברית","a-NI me-da-BE-ret ktsat iv-RIT"],
+    ["אתה מדבר אנגלית?","a-TA me-da-BER ang-LIT?","Do you speak English? (to a man)"],
+    ["אני לא יודע","a-NI lo yo-DE-a","I don’t know","אני לא יודעת","a-NI lo yo-DA-at"],
+    ["מה זה?","ma ze?","What is this?"],
+    ["איך אומרים את זה בעברית?","eich om-RIM et ze be-iv-RIT?","How do you say this in Hebrew?"],
+    ["אין בעיה","ein be-a-YA","No problem"],
+    ["רגע","RE-ga","Just a moment"]
+  ],
+  talk:{ partner:"Avi", role:"neighbor", g:"m", scene:"Your neighbor talks fast. Slow him down!", steps:[
+    {p:["תגיד, אתה בא מחר לארוחת ערב אצלנו?","ta-GID, a-TA ba ma-CHAR la-a-ru-CHAT E-rev etz-LE-nu?","Say, are you coming to dinner at our place tomorrow?"], pf:["תגידי, את באה מחר לארוחת ערב אצלנו?","ta-GI-di, at BA-a ma-CHAR la-a-ru-CHAT E-rev etz-LE-nu?","Say, are you coming to dinner at our place tomorrow?"], a:["אני לא מבין","לאט יותר בבקשה","אפשר לחזור על זה","סליחה"], af:["אני לא מבינה","לאט יותר בבקשה","אפשר לחזור על זה","סליחה"], m:["סליחה, אני לא מבין","sli-CHA, a-NI lo me-VIN","Sorry, I don’t understand"], mf:["סליחה, אני לא מבינה","sli-CHA, a-NI lo me-vi-NA","Sorry, I don’t understand"]},
+    {p:["אה, אתה מדבר עברית?","ah, a-TA me-da-BER iv-RIT?","Oh, do you speak Hebrew?"], pf:["אה, את מדברת עברית?","ah, at me-da-BE-ret iv-RIT?","Oh, do you speak Hebrew?"], a:["קצת","אני מדבר קצת עברית","כן"], af:["קצת","אני מדברת קצת עברית","כן"], m:["אני מדבר קצת עברית","a-NI me-da-BER ktsat iv-RIT","I speak a little Hebrew"], mf:["אני מדברת קצת עברית","a-NI me-da-BE-ret ktsat iv-RIT","I speak a little Hebrew"]},
+    {p:["אין בעיה! ארוחת ערב, מחר.","ein be-a-YA! a-ru-CHAT E-rev, ma-CHAR.","No problem! Dinner, tomorrow."], a:["תודה","תודה רבה","בסדר","כן"], m:["תודה רבה!","to-DA ra-BA!","Thank you very much!"]},
+    {p:["בשבע. בסדר?","be-SHE-va. be-SE-der?","At seven. OK?"], a:["בסדר","כן","אין בעיה","מעולה"], m:["בסדר, אין בעיה","be-SE-der, ein be-a-YA","OK, no problem"]}
+  ]}
+},
+{ title:"Numbers & Money", he:"מספרים וכסף", desc:"Count to ten, ask prices and haggle at the shuk.",
+  phrases:[
+    ["אחת, שתיים, שלוש","a-CHAT, SHTA-yim, sha-LOSH","One, two, three"],
+    ["ארבע, חמש, שש","AR-ba, cha-MESH, shesh","Four, five, six"],
+    ["שבע, שמונה, תשע, עשר","SHE-va, shmo-NE, TE-sha, E-ser","Seven, eight, nine, ten"],
+    ["כמה זה עולה?","KA-ma ze o-LE?","How much does this cost?"],
+    ["עשרים שקל","es-RIM SHE-kel","Twenty shekels"],
+    ["חמישים שקל","cha-mi-SHIM SHE-kel","Fifty shekels"],
+    ["מאה שקל","ME-a SHE-kel","A hundred shekels"],
+    ["זה יקר מדי","ze ya-KAR mi-DAI","That’s too expensive"],
+    ["זה זול","ze zol","That’s cheap"],
+    ["אפשר לשלם בכרטיס?","ef-SHAR le-sha-LEM be-kar-TIS?","Can I pay by card?"]
+  ],
+  talk:{ partner:"Moshe", role:"market seller", g:"m", scene:"Buying fruit at the shuk.", steps:[
+    {p:["בוקר טוב! מה אתה צריך?","BO-ker tov! ma a-TA tsa-RICH?","Good morning! What do you need?"], pf:["בוקר טוב! מה את צריכה?","BO-ker tov! ma at tsri-CHA?","Good morning! What do you need?"], a:["כמה זה עולה","כמה"], m:["כמה זה עולה?","KA-ma ze o-LE?","How much does this cost?"]},
+    {p:["שלושים שקל.","shlo-SHIM SHE-kel.","Thirty shekels."], a:["זה יקר מדי","זה יקר","יקר"], m:["זה יקר מדי!","ze ya-KAR mi-DAI!","That’s too expensive!"]},
+    {p:["טוב, בשבילך עשרים.","tov, bish-vil-CHA es-RIM.","OK, for you, twenty."], pf:["טוב, בשבילך עשרים.","tov, bish-vi-LECH es-RIM.","OK, for you, twenty."], a:["אפשר לשלם בכרטיס","בסדר","תודה","מעולה"], m:["אפשר לשלם בכרטיס?","ef-SHAR le-sha-LEM be-kar-TIS?","Can I pay by card?"]},
+    {p:["בטח. תודה רבה!","BE-tach. to-DA ra-BA!","Sure. Thanks a lot!"], a:["תודה","להתראות","בבקשה","תודה רבה"], m:["תודה, להתראות!","to-DA, le-hit-ra-OT!","Thanks, goodbye!"]}
+  ]}
+},
+{ title:"At the Café", he:"בבית קפה", desc:"Order like a local — hafuch, no sugar, check please.",
+  phrases:[
+    ["אני רוצה קפה","a-NI ro-TSE ka-FE","I’d like a coffee","אני רוצה קפה","a-NI ro-TSA ka-FE"],
+    ["אפשר הפוך?","ef-SHAR ha-FUCH?","Can I have a latte? (“hafuch”)"],
+    ["עם חלב","im cha-LAV","With milk"],
+    ["בלי סוכר","b-LI SU-kar","Without sugar"],
+    ["מים, בבקשה","MA-yim, be-va-ka-SHA","Water, please"],
+    ["לשבת או לקחת?","la-SHE-vet o la-KA-chat?","For here or to go?"],
+    ["לקחת, בבקשה","la-KA-chat, be-va-ka-SHA","To go, please"],
+    ["זהו, תודה","ZE-hu, to-DA","That’s all, thanks"],
+    ["טעים מאוד","ta-IM me-OD","Very tasty"],
+    ["את החשבון, בבקשה","et ha-chesh-BON, be-va-ka-SHA","The check, please"]
+  ],
+  talk:{ partner:"Shira", role:"waitress", g:"f", scene:"An evening at a café in Tel Aviv.", steps:[
+    {p:["ערב טוב! מה תרצה?","E-rev tov! ma tir-TSE?","Good evening! What would you like?"], pf:["ערב טוב! מה תרצי?","E-rev tov! ma tir-TSI?","Good evening! What would you like?"], a:["אני רוצה קפה","אפשר הפוך","הפוך","קפה"], m:["אפשר הפוך, בבקשה?","ef-SHAR ha-FUCH, be-va-ka-SHA?","Can I have a latte, please?"]},
+    {p:["עם סוכר?","im SU-kar?","With sugar?"], a:["בלי סוכר","לא","כן","עם סוכר"], m:["בלי סוכר, תודה","b-LI SU-kar, to-DA","Without sugar, thanks"]},
+    {p:["לשבת או לקחת?","la-SHE-vet o la-KA-chat?","For here or to go?"], a:["לשבת","לקחת"], m:["לשבת, בבקשה","la-SHE-vet, be-va-ka-SHA","For here, please"]},
+    {p:["עוד משהו?","od MASH-hu?","Anything else?"], a:["זהו תודה","זהו","לא תודה","מים בבקשה"], m:["זהו, תודה","ZE-hu, to-DA","That’s all, thanks"]},
+    {p:["בתיאבון!","be-te-a-VON!","Enjoy your meal!"], a:["תודה","תודה רבה","טעים מאוד"], m:["תודה רבה!","to-DA ra-BA!","Thank you very much!"]}
+  ]}
+},
+{ title:"Getting Around", he:"להתמצא", desc:"Ask for directions, understand left and right, catch a taxi.",
+  phrases:[
+    ["איפה התחנה?","EI-fo ha-ta-cha-NA?","Where is the station?"],
+    ["איפה השירותים?","EI-fo ha-she-ru-TIM?","Where is the restroom?"],
+    ["ימינה","ya-MI-na","To the right"],
+    ["שמאלה","SMO-la","To the left"],
+    ["ישר","ya-SHAR","Straight ahead"],
+    ["זה רחוק?","ze ra-CHOK?","Is it far?"],
+    ["זה קרוב","ze ka-ROV","It’s close"],
+    ["אני צריך מונית","a-NI tsa-RICH MO-nit","I need a taxi","אני צריכה מונית","a-NI tsri-CHA MO-nit"],
+    ["לאן?","le-AN?","Where to?"],
+    ["לתל אביב, בבקשה","le-tel a-VIV, be-va-ka-SHA","To Tel Aviv, please"]
+  ],
+  talk:{ partner:"Ruti", role:"passer-by", g:"f", scene:"You’re lost and looking for the train station.", steps:[
+    {p:["אפשר לעזור?","ef-SHAR la-a-ZOR?","Can I help?"], a:["איפה התחנה","כן איפה התחנה"], m:["כן, איפה התחנה?","ken, EI-fo ha-ta-cha-NA?","Yes, where is the station?"]},
+    {p:["ישר, ואז ימינה.","ya-SHAR, ve-AZ ya-MI-na.","Straight, then right."], a:["זה רחוק","רחוק"], m:["זה רחוק?","ze ra-CHOK?","Is it far?"]},
+    {p:["לא, זה קרוב. חמש דקות.","lo, ze ka-ROV. cha-MESH da-KOT.","No, it’s close. Five minutes."], a:["תודה רבה","תודה"], m:["תודה רבה!","to-DA ra-BA!","Thanks a lot!"]},
+    {p:["בבקשה! נסיעה טובה.","be-va-ka-SHA! ne-si-A to-VA.","You’re welcome! Have a good trip."], a:["תודה","להתראות","יום טוב","ביי"], m:["תודה, להתראות!","to-DA, le-hit-ra-OT!","Thanks, bye!"]}
+  ]}
+},
+{ title:"About You", he:"עליך", desc:"Where you’re from, what you do, and why you’re learning Hebrew.",
+  phrases:[
+    ["מאיפה אתה?","me-EI-fo a-TA?","Where are you from? (to a man)"],
+    ["אני מארצות הברית","a-NI me-ar-TSOT ha-BRIT","I’m from the United States"],
+    ["עברתי לישראל השנה","a-VAR-ti le-yis-ra-EL ha-sha-NA","I moved to Israel this year"],
+    ["אני חדש בארץ","a-NI cha-DASH ba-A-retz","I’m new in the country","אני חדשה בארץ","a-NI cha-da-SHA ba-A-retz"],
+    ["מה אתה עושה?","ma a-TA o-SE?","What do you do? (to a man)"],
+    ["אני עובד בשיווק","a-NI o-VED be-shi-VUK","I work in marketing","אני עובדת בשיווק","a-NI o-VE-det be-shi-VUK"],
+    ["אני לומד עברית","a-NI lo-MED iv-RIT","I’m learning Hebrew","אני לומדת עברית","a-NI lo-ME-det iv-RIT"],
+    ["אני אוהב את ישראל","a-NI o-HEV et yis-ra-EL","I love Israel","אני אוהבת את ישראל","a-NI o-HE-vet et yis-ra-EL"],
+    ["יש לך ילדים?","yesh le-CHA ye-la-DIM?","Do you have kids? (to a man)"],
+    ["ואתה?","ve-a-TA?","And you? (to a man)"]
+  ],
+  talk:{ partner:"Eli", role:"guest at a party", g:"m", scene:"Small talk at a friend’s party. Some answers are yours to choose.", steps:[
+    {p:["אתה חדש פה?","a-TA cha-DASH po?","Are you new here?"], pf:["את חדשה פה?","at cha-da-SHA po?","Are you new here?"], a:["כן","אני חדש בארץ","עברתי לישראל השנה"], af:["כן","אני חדשה בארץ","עברתי לישראל השנה"], m:["כן, אני חדש בארץ","ken, a-NI cha-DASH ba-A-retz","Yes, I’m new in the country"], mf:["כן, אני חדשה בארץ","ken, a-NI cha-da-SHA ba-A-retz","Yes, I’m new in the country"]},
+    {p:["מאיפה אתה?","me-EI-fo a-TA?","Where are you from?"], pf:["מאיפה את?","me-EI-fo AT?","Where are you from?"], open:true, m:["אני מארצות הברית","a-NI me-ar-TSOT ha-BRIT","I’m from the United States"]},
+    {p:["ומה אתה עושה?","u-MA a-TA o-SE?","And what do you do?"], pf:["ומה את עושה?","u-MA at o-SA?","And what do you do?"], open:true, m:["אני עובד בשיווק","a-NI o-VED be-shi-VUK","I work in marketing"], mf:["אני עובדת בשיווק","a-NI o-VE-det be-shi-VUK","I work in marketing"]},
+    {p:["וואו, אתה מדבר עברית יפה!","wow, a-TA me-da-BER iv-RIT ya-FE!","Wow, you speak Hebrew nicely!"], pf:["וואו, את מדברת עברית יפה!","wow, at me-da-BE-ret iv-RIT ya-FE!","Wow, you speak Hebrew nicely!"], a:["תודה","אני לומד עברית"], af:["תודה","אני לומדת עברית"], m:["תודה, אני לומד עברית","to-DA, a-NI lo-MED iv-RIT","Thanks, I’m learning Hebrew"], mf:["תודה, אני לומדת עברית","to-DA, a-NI lo-ME-det iv-RIT","Thanks, I’m learning Hebrew"]},
+    {p:["כל הכבוד!","kol ha-ka-VOD!","Well done!"], a:["תודה","תודה רבה"], m:["תודה רבה!","to-DA ra-BA!","Thank you very much!"]}
+  ]}
+},
+{ title:"Time & Plans", he:"זמן ותוכניות", desc:"Today, tomorrow, what time — and making plans with friends.",
+  phrases:[
+    ["מה השעה?","ma ha-sha-A?","What time is it?"],
+    ["היום","ha-YOM","Today"],
+    ["מחר","ma-CHAR","Tomorrow"],
+    ["אתמול","et-MOL","Yesterday"],
+    ["בשבוע הבא","ba-sha-VU-a ha-BA","Next week"],
+    ["אתה פנוי מחר?","a-TA pa-NUY ma-CHAR?","Are you free tomorrow? (to a man)"],
+    ["בוא ניפגש","bo nif-GASH","Let’s meet (to a man)"],
+    ["באיזו שעה?","be-EI-zo sha-A?","At what time?"],
+    ["בשמונה בערב","bi-shmo-NE ba-E-rev","At eight in the evening"],
+    ["יאללה, סגור","YA-la, sa-GUR","Great, it’s a deal"]
+  ],
+  talk:{ partner:"Yossi", role:"friend", g:"m", scene:"Making plans for tomorrow.", steps:[
+    {p:["מה אתה עושה מחר?","ma a-TA o-SE ma-CHAR?","What are you doing tomorrow?"], pf:["מה את עושה מחר?","ma at o-SA ma-CHAR?","What are you doing tomorrow?"], open:true, m:["אני לא יודע. למה?","a-NI lo yo-DE-a. LA-ma?","I don’t know. Why?"], mf:["אני לא יודעת. למה?","a-NI lo yo-DA-at. LA-ma?","I don’t know. Why?"]},
+    {p:["בוא ניפגש לקפה!","bo nif-GASH le-ka-FE!","Let’s meet for coffee!"], pf:["בואי ניפגש לקפה!","BO-i nif-GASH le-ka-FE!","Let’s meet for coffee!"], a:["באיזו שעה","בסדר","יאללה"], m:["באיזו שעה?","be-EI-zo sha-A?","At what time?"]},
+    {p:["בשמונה בערב?","bi-shmo-NE ba-E-rev?","At eight in the evening?"], a:["יאללה סגור","סגור","בסדר","מעולה","אחלה"], m:["יאללה, סגור","YA-la, sa-GUR","Great, it’s a deal"]},
+    {p:["מעולה. נתראה מחר!","me-u-LE. nit-ra-E ma-CHAR!","Great. See you tomorrow!"], a:["להתראות","נתראה","ביי","נתראה מחר"], m:["נתראה מחר!","nit-ra-E ma-CHAR!","See you tomorrow!"]}
+  ]}
+},
+{ title:"Feelings & Opinions", he:"רגשות ודעות", desc:"Say how you feel, agree, disagree and shrug.",
+  phrases:[
+    ["אני עייף","a-NI a-YEF","I’m tired","אני עייפה","a-NI a-ye-FA"],
+    ["אני שמח","a-NI sa-ME-ach","I’m happy","אני שמחה","a-NI sme-CHA"],
+    ["אני רעב","a-NI ra-EV","I’m hungry","אני רעבה","a-NI re-e-VA"],
+    ["מה אתה חושב?","ma a-TA cho-SHEV?","What do you think? (to a man)"],
+    ["אני חושב שכן","a-NI cho-SHEV she-KEN","I think so","אני חושבת שכן","a-NI cho-SHE-vet she-KEN"],
+    ["אני מסכים","a-NI mas-KIM","I agree","אני מסכימה","a-NI mas-ki-MA"],
+    ["זה מעולה","ze me-u-LE","That’s excellent"],
+    ["זה לא משנה","ze lo me-sha-NE","It doesn’t matter"],
+    ["אין לי מושג","ein li mu-SAG","I have no idea"],
+    ["אחלה","ACH-la","Awesome"]
+  ],
+  talk:{ partner:"Maya", role:"coworker", g:"f", scene:"Lunch break with a coworker.", steps:[
+    {p:["מה קורה? אתה נראה עייף.","ma ko-RE? a-TA nir-E a-YEF.","What’s up? You look tired."], pf:["מה קורה? את נראית עייפה.","ma ko-RE? at nir-EIT a-ye-FA.","What’s up? You look tired."], a:["כן אני עייף","אני עייף","כן","לא"], af:["כן אני עייפה","אני עייפה","כן","לא"], m:["כן, אני עייף","ken, a-NI a-YEF","Yes, I’m tired"], mf:["כן, אני עייפה","ken, a-NI a-ye-FA","Yes, I’m tired"]},
+    {p:["רוצה לאכול משהו?","ro-TSE le-e-CHOL MASH-hu?","Want to eat something?"], pf:["רוצה לאכול משהו?","ro-TSA le-e-CHOL MASH-hu?","Want to eat something?"], a:["כן אני רעב","אני רעב","כן"], af:["כן אני רעבה","אני רעבה","כן"], m:["כן, אני רעב!","ken, a-NI ra-EV!","Yes, I’m hungry!"], mf:["כן, אני רעבה!","ken, a-NI re-e-VA!","Yes, I’m hungry!"]},
+    {p:["פיצה או פלאפל?","PI-tsa o fa-LA-fel?","Pizza or falafel?"], a:["פלאפל","פיצה","זה לא משנה","אין לי מושג"], m:["זה לא משנה","ze lo me-sha-NE","It doesn’t matter"]},
+    {p:["אז פלאפל. פלאפל זה אחלה, נכון?","az fa-LA-fel. fa-LA-fel ze ACH-la, na-CHON?","Falafel then. Falafel is awesome, right?"], a:["אני מסכים","נכון","כן","אחלה"], af:["אני מסכימה","נכון","כן","אחלה"], m:["אני מסכים!","a-NI mas-KIM!","I agree!"], mf:["אני מסכימה!","a-NI mas-ki-MA!","I agree!"]}
+  ]}
+},
+{ title:"Real Conversation", he:"שיחה אמיתית", desc:"The little words that keep a conversation flowing.",
+  phrases:[
+    ["מה קורה?","ma ko-RE?","What’s going on?"],
+    ["ספר לי","sa-PER li","Tell me (to a man)"],
+    ["באמת?","be-e-MET?","Really?"],
+    ["נכון","na-CHON","Right / true"],
+    ["בטח","BE-tach","Sure"],
+    ["אולי","u-LAI","Maybe"],
+    ["אבל","a-VAL","But"],
+    ["כי","ki","Because"],
+    ["אין מצב!","ein ma-TSAV!","No way!"],
+    ["שיהיה לך יום טוב","she-yi-YE le-CHA yom tov","Have a good day (to a man)"]
+  ],
+  talk:{ partner:"Dana", role:"friend", g:"f", scene:"Catching up with a friend — longer, with open answers.", steps:[
+    {p:["היי! מה קורה?","hai! ma ko-RE?","Hey! What’s up?"], a:["הכל טוב","בסדר","טוב","אחלה"], m:["הכל טוב! מה איתך?","ha-KOL tov! ma i-TACH?","All good! How about you?"]},
+    {p:["אני בסדר. ספר לי, איך העברית?","a-NI be-SE-der. sa-PER li, eich ha-iv-RIT?","I’m fine. Tell me, how’s the Hebrew going?"], pf:["אני בסדר. ספרי לי, איך העברית?","a-NI be-SE-der. sap-RI li, eich ha-iv-RIT?","I’m fine. Tell me, how’s the Hebrew going?"], open:true, m:["טוב, אני לומד כל יום","tov, a-NI lo-MED kol yom","Good, I study every day"], mf:["טוב, אני לומדת כל יום","tov, a-NI lo-ME-det kol yom","Good, I study every day"]},
+    {p:["באמת? אתה מדבר כבר טוב!","be-e-MET? a-TA me-da-BER kvar tov!","Really? You already speak well!"], pf:["באמת? את מדברת כבר טוב!","be-e-MET? at me-da-BE-ret kvar tov!","Really? You already speak well!"], a:["תודה","אין מצב","באמת","תודה רבה"], m:["אין מצב! תודה!","ein ma-TSAV! to-DA!","No way! Thanks!"]},
+    {p:["רוצה לבוא איתנו לים בשבת?","ro-TSE la-VO i-TA-nu la-YAM be-sha-BAT?","Want to come with us to the beach on Saturday?"], pf:["רוצה לבוא איתנו לים בשבת?","ro-TSA la-VO i-TA-nu la-YAM be-sha-BAT?","Want to come with us to the beach on Saturday?"], open:true, m:["אולי. באיזו שעה?","u-LAI. be-EI-zo sha-A?","Maybe. At what time?"]},
+    {p:["בעשר בבוקר. בוא!","be-E-ser ba-BO-ker. bo!","At ten in the morning. Come!"], pf:["בעשר בבוקר. בואי!","be-E-ser ba-BO-ker. BO-i!","At ten in the morning. Come!"], a:["בטח","יאללה","סגור","בסדר","אולי"], m:["בטח, יאללה!","BE-tach, YA-la!","Sure, let’s go!"]},
+    {p:["מעולה! יום טוב!","me-u-LE! yom tov!","Great! Have a good day!"], a:["גם לך","יום טוב","שיהיה לך יום טוב","להתראות","ביי"], m:["גם לך! להתראות!","gam LACH! le-hit-ra-OT!","You too! Bye!"]}
+  ]}
+}
+];
+
+/* =========================================================
+   STATE
+   ========================================================= */
+const STORE_KEY = "daber-hebrew-v1";
+const DAY = 86400000;
+const BOX_DAYS = [0, 1, 2, 4, 8, 16, 32];
+function defaultState(){
+  return { settings:{ gender:"m", name:"Ian", showHebrew:true, rate:0.9, voiceURI:"", partnerVoiceURI:"", enVoiceURI:"", unlockAll:false },
+           phrases:{}, levels:{}, streak:{ last:"", count:0 }, history:{ attempts:0, correct:0 } };
+}
+let S = defaultState();
+function load(){
+  try{ const raw = localStorage.getItem(STORE_KEY); if(raw){ const d = JSON.parse(raw); S = Object.assign(defaultState(), d); S.settings = Object.assign(defaultState().settings, d.settings||{}); } }catch(e){}
+}
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }catch(e){} }
+load();
+
+const pid = (li, pi) => li + "-" + pi;
+function pstat(id){ return S.phrases[id] || (S.phrases[id] = { box:0, due:0, seen:0, ok:0, tries:0 }); }
+function lstat(li){ return S.levels[li] || (S.levels[li] = { learn:false, recall:false, talk:false }); }
+function levelDone(li){ const l = lstat(li); return l.learn && l.recall && l.talk; }
+function unlocked(li){ return S.settings.unlockAll || li === 0 || levelDone(li - 1); }
+function todayStr(){ const d = new Date(); return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate(); }
+function bumpStreak(){
+  const t = todayStr(); if(S.streak.last === t) return;
+  const y = new Date(Date.now() - DAY); const ys = y.getFullYear()+"-"+(y.getMonth()+1)+"-"+y.getDate();
+  S.streak.count = (S.streak.last === ys) ? S.streak.count + 1 : 1; S.streak.last = t; save(); renderStreak();
+}
+function promote(id, full){
+  const s = pstat(id); s.ok++; s.tries++;
+  if(full){ s.box = Math.min(s.box + 1, BOX_DAYS.length - 1); }
+  s.due = Date.now() + BOX_DAYS[s.box] * DAY - 3600000; save();
+}
+function demote(id){ const s = pstat(id); s.tries++; s.box = Math.max(0, s.box - 1); s.due = 0; save(); }
+function levelProgress(li){
+  const n = LEVELS[li].phrases.length; let sum = 0;
+  for(let i=0;i<n;i++){ sum += Math.min(pstat(pid(li,i)).box, 3) / 3; }
+  const l = lstat(li); const steps = (l.learn?1:0)+(l.recall?1:0)+(l.talk?1:0);
+  return Math.round(((sum / n) * 0.5 + (steps / 3) * 0.5) * 100);
+}
+function dueList(){
+  const now = Date.now(), out = [];
+  LEVELS.forEach((L, li) => { if(!lstat(li).learn) return; L.phrases.forEach((p, pi) => { const s = pstat(pid(li,pi)); if(s.seen && s.due <= now) out.push([li,pi]); }); });
+  out.sort((a,b) => pstat(pid(...a)).box - pstat(pid(...b)).box);
+  return out;
+}
+
+/* phrase helpers (gender + name) */
+const female = () => S.settings.gender === "f";
+const nameStr = () => (S.settings.name || "").trim() || "…";
+function fill(s){ return s.replace(/\{name\}/g, nameStr()); }
+function phrase(li, pi){
+  const p = LEVELS[li].phrases[pi];
+  const he = (female() && p[3]) ? p[3] : p[0];
+  const tr = (female() && p[4]) ? p[4] : p[1];
+  return { he, tr, en:p[2], id:pid(li,pi), li, pi };
+}
+function stepLines(st){
+  const p = (female() && st.pf) ? st.pf : st.p;
+  const m = (female() && st.mf) ? st.mf : st.m;
+  const a = (female() && st.af) ? st.af : st.a;
+  return { p, m, a, open:!!st.open };
+}
+
+/* =========================================================
+   SPEECH: text-to-speech
+   ========================================================= */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const synth = window.speechSynthesis || null;
+let voices = [], heVoices = [], enVoices = [];
+let currentUtter = null;
+function loadVoices(){
+  if(!synth) return;
+  voices = synth.getVoices();
+  // Prefer natural-sounding voices, and a warm female voice for the teacher.
+  function score(v){ let s = 0; if(/natural|online|neural|premium|enhanced/i.test(v.name)) s += 3; if(/google/i.test(v.name)) s += 1; if(v.localService === false) s += 1; if(/en[-_]US/i.test(v.lang)) s += 1; if(isFemale(v)) s += 5; if(/^(ava|jenny|aria|emma)\b|microsoft (ava|jenny|aria|emma)/i.test(v.name)) s += 1; return s; }
+  heVoices = voices.filter(v => /^(he|iw)([-_]|$)/i.test(v.lang)).sort((a,b) => score(b) - score(a));
+  enVoices = voices.filter(v => /^en([-_]|$)/i.test(v.lang)).sort((a,b) => score(b) - score(a));
+  renderBanners();
+}
+const FEMALE_RX = /hila|carmit|female|woman|\bava\b|jenny|aria|emma|michelle|sara\b|zira|samantha|susan|hazel|libby|sonia|natasha|karen|moira|tessa|serena|allison|ava |google us english/i;
+const MALE_RX = /avri|asaf|\bmale\b|\bman\b|\bguy\b|davis|andrew|brian|christopher|\beric\b|roger|steffan|david|\bmark\b|george|ryan|daniel|\balex\b|\bfred\b|\btom\b/i;
+function isFemale(v){ return FEMALE_RX.test(v.name) && !/\bmale\b/i.test(v.name.replace(/female/ig,"")); }
+function heGender(v){ if(isFemale(v)) return "f"; if(MALE_RX.test(v.name)) return "m"; return ""; }
+function pickEn(){ return enVoices.find(x => x.voiceURI === S.settings.enVoiceURI) || enVoices[0] || null; }
+if(synth){ setTimeout(loadVoices, 0); synth.onvoiceschanged = loadVoices; setTimeout(loadVoices, 600); setTimeout(loadVoices, 2000); }
+function pickVoice(partner, g){
+  const teacher = heVoices.find(x => x.voiceURI === S.settings.voiceURI) || heVoices[0] || null;
+  if(!partner) return teacher;
+  const set = heVoices.find(x => x.voiceURI === S.settings.partnerVoiceURI); if(set) return set;
+  if(g){ const m = heVoices.find(v => heGender(v) === g && v !== teacher) || heVoices.find(v => heGender(v) === g); if(m) return m; }
+  return heVoices.find(v => v !== teacher) || teacher;
+}
+let voiceWarned = false;
+function voiceProblem(msg){
+  if(voiceWarned) return; voiceWarned = true;
+  const b = document.getElementById("banners");
+  if(b) b.insertAdjacentHTML("afterbegin", `<div class="banner warn"><b>Audio isn’t playing.</b> ${msg}</div>`);
+  toast("Audio isn’t playing. See the note at the top.");
+}
+async function speak(text, opts={}){
+  if(!synth){ voiceProblem("This browser has no speech support. Open the file in Microsoft Edge or Google Chrome."); return; }
+  if(!voices.length) loadVoices();
+  const en = opts.lang === "en";
+  if(!en && !heVoices.length && voices.length){
+    voiceProblem("This browser has no Hebrew voice installed. Open the file in <b>Microsoft Edge</b>, which has natural Hebrew voices built in (Avri and Hila). On a Mac, Safari with the Carmit voice also works.");
+  }
+  // Chrome bug: speaking right after cancel() can drop the new utterance. Cancel only if needed, then wait a moment.
+  try{ if(synth.speaking || synth.pending){ synth.cancel(); await sleep(80); } synth.resume(); }catch(e){}
+  return new Promise(resolve => {
+    const clean = text.replace(/[!?.,…]+$/,"");
+    const u = new SpeechSynthesisUtterance(clean);
+    const v = en ? pickEn() : pickVoice(opts.partner, opts.g);
+    if(v){ u.voice = v; u.lang = v.lang; } else { u.lang = en ? "en-US" : "he-IL"; }
+    u.rate = en ? 0.97 : (opts.slow ? 0.6 : (S.settings.rate || 0.9));
+    if(en) u.pitch = 1.05;
+    let done = false, started = false;
+    const fin = () => { if(!done){ done = true; clearInterval(keep); resolve(); } };
+    u.onstart = () => { started = true; };
+    u.onend = fin; u.onerror = fin;
+    currentUtter = u;
+    synth.speak(u);
+    // Chrome stops long utterances after ~15s unless nudged.
+    const keep = setInterval(() => { try{ if(synth.speaking){ synth.pause(); synth.resume(); } }catch(e){} }, 10000);
+    setTimeout(() => { if(!started && !done){ try{ synth.cancel(); }catch(e){} voiceProblem(en ? "Your browser didn’t start speaking. Make sure the tab isn’t muted and your volume is up, and open the downloaded file directly in Microsoft Edge or Chrome, not inside a preview window." : "Your browser didn’t start speaking Hebrew. Open the downloaded file directly in <b>Microsoft Edge</b>, not inside a preview window, and check that the tab isn’t muted."); fin(); } }, 2500);
+    setTimeout(fin, 3000 + clean.length * 220);
+  });
+}
+
+/* =========================================================
+   SPEECH: recognition
+   ========================================================= */
+let rec = null, listening = false;
+function listen(onInterim){
+  return new Promise(resolve => {
+    if(!SR){ resolve({ error:"unsupported", alts:[] }); return; }
+    try{ synth && synth.cancel(); }catch(e){}
+    const r = new SR(); rec = r;
+    r.lang = "he-IL"; r.interimResults = true; r.maxAlternatives = 5; r.continuous = false;
+    let finals = [], err = null, gotFinal = false;
+    const timer = setTimeout(() => { try{ r.stop(); }catch(e){} }, 9000);
+    r.onresult = ev => {
+      let interim = "";
+      for(let i = ev.resultIndex; i < ev.results.length; i++){
+        const res = ev.results[i];
+        if(res.isFinal){ gotFinal = true; finals = []; for(let k=0;k<res.length;k++) finals.push(res[k].transcript); }
+        else interim += res[0].transcript;
+      }
+      if(onInterim) onInterim(interim || (finals[0]||""));
+    };
+    r.onerror = e => { err = e.error; };
+    r.onend = () => { clearTimeout(timer); listening = false; rec = null; resolve({ error: gotFinal ? null : (err || "no-speech"), alts: finals }); };
+    try{ r.start(); listening = true; }catch(e){ clearTimeout(timer); resolve({ error:"start-failed", alts:[] }); }
+  });
+}
+function stopListening(){ try{ rec && rec.stop(); }catch(e){} }
+function errorText(code){
+  if((code === "not-allowed" || code === "service-not-allowed") && location.protocol === "file:")
+    return "The browser blocked the microphone. Browsers often do this for files opened from your computer. Click the mic or lock icon in the address bar and choose Allow; if there’s no option to allow it, open the app from a web link instead.";
+  if((code === "not-allowed" || code === "service-not-allowed") && IN_FRAME)
+    return "The microphone is blocked inside this preview window. Download the file and open it directly in Edge or Chrome.";
+  return ({
+    "not-allowed":"Microphone access was blocked. Click the lock/camera icon in the address bar and allow the microphone, then try again.",
+    "service-not-allowed":"Microphone access was blocked. Allow the microphone for this page and try again.",
+    "no-speech":"I didn’t catch anything. Tap the mic and speak right after it turns red.",
+    "audio-capture":"No microphone found. Check that one is connected.",
+    "network":"Speech recognition needs an internet connection. Check your connection and try again.",
+    "language-not-supported": /iPhone|iPad|iPod/i.test(navigator.userAgent) ? "Your iPhone can’t recognize Hebrew yet. Go to Settings › General › Keyboard, turn on Enable Dictation, and add the Hebrew keyboard. Then try again." : "This browser can’t recognize Hebrew. Try Chrome or Microsoft Edge.",
+    "unsupported":"This browser can’t listen. Open the page in Chrome or Microsoft Edge.",
+    "start-failed":"Couldn’t start the microphone. Try again in a second."
+  })[code] || "Something went wrong with the microphone ("+code+"). Try again.";
+}
+
+/* =========================================================
+   PRONUNCIATION MATCHING
+   ========================================================= */
+const FINALS = { "ך":"כ","ם":"מ","ן":"נ","ף":"פ","ץ":"צ" };
+const NUMS = { "1":["אחת","אחד"],"2":["שתיים","שניים","שתים"],"3":["שלוש","שלושה"],"4":["ארבע","ארבעה"],"5":["חמש","חמישה"],"6":["שש","שישה"],"7":["שבע","שבעה"],"8":["שמונה"],"9":["תשע","תשעה"],"10":["עשר","עשרה"],"20":["עשרים"],"30":["שלושים"],"40":["ארבעים"],"50":["חמישים"],"100":["מאה"] };
+function norm(s){
+  return (s||"").replace(/[֑-ׇ]/g,"")
+    .replace(/[׳״'"`’‘“”\-־]/g,"")
+    .replace(/₪/g," שקל ")
+    .replace(/(\d+):00/g,"$1")
+    .replace(/(\d+)/g," $1 ")
+    .replace(/[^א-ת0-9\s]/g," ")
+    .replace(/[ךםןףץ]/g, c => FINALS[c])
+    .replace(/\s+/g," ").trim();
+}
+function tokens(s){ const n = norm(s); return n ? n.split(" ") : []; }
+function lev(a,b){
+  if(a===b) return 0; const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
+  let prev = Array.from({length:n+1},(_,j)=>j), cur = new Array(n+1);
+  for(let i=1;i<=m;i++){ cur[0]=i; for(let j=1;j<=n;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); } [prev,cur]=[cur,prev]; }
+  return prev[n];
+}
+const skel = w => w.replace(/[וי]/g,"");
+function sim(a,b){
+  if(a===b) return 1;
+  const raw = 1 - lev(a,b)/Math.max(a.length,b.length);
+  const sa = skel(a), sb = skel(b);
+  const sk = (sa && sb) ? (1 - lev(sa,sb)/Math.max(sa.length,sb.length)) * 0.95 : 0;
+  return Math.max(raw, sk);
+}
+function forms(tok){ return NUMS[tok] ? NUMS[tok] : [tok]; }
+function candidates(heardToks){
+  const c = [];
+  heardToks.forEach((t,i) => {
+    forms(t).forEach(f => c.push(f));
+    if(i+1 < heardToks.length){ forms(t).forEach(f => forms(heardToks[i+1]).forEach(g => c.push(f+g))); }
+  });
+  return c;
+}
+function scoreAgainst(target, heard){
+  const tw = tokens(target.replace(/\{name\}/g,""));
+  const hc = candidates(tokens(heard));
+  const words = tw.map(w => { let best = 0; hc.forEach(h => { best = Math.max(best, sim(w,h)); }); return { w, s:best, ok: best >= (w.length <= 2 ? 0.99 : 0.74) }; });
+  const avg = words.length ? words.reduce((a,x)=>a+x.s,0)/words.length : 0;
+  const allOk = words.every(x => x.ok);
+  return { words, score:avg, verdict: allOk ? "good" : (avg >= 0.6 ? "close" : "bad") };
+}
+/* evaluate a set of acceptable targets against all recognizer alternatives */
+function evaluate(targets, alts){
+  let best = null;
+  targets.forEach((t, ti) => alts.forEach(h => {
+    const r = scoreAgainst(t, h); r.heard = h; r.target = t; r.ti = ti;
+    if(!best || r.score > best.score || (r.verdict==="good" && best.verdict!=="good")) best = r;
+  }));
+  return best || { words:[], score:0, verdict:"bad", heard:"", target:targets[0], ti:0 };
+}
+function hasHebrew(s){ return /[א-ת0-9]/.test(s||""); }
+
+/* =========================================================
+   UI helpers
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const app = $("#app");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const ICON = {
+  play:'<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+  slow:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 15c0-4 3.5-7 8-7s8 3 8 7"/><path d="M2 15h19"/><path d="M19 15c1.5 0 2.5-1 2.5-2.5S20.5 10 19 10"/><path d="M6 15v3M16 15v3"/></svg>',
+  mic:'<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  pause:'<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+  stop:'<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  spk:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>',
+  back:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  check:'<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  lock:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
+};
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2200); }
+function renderStreak(){ $("#streakChip").textContent = (S.streak.count||0) + "-day streak"; }
+const IN_FRAME = (() => { try{ return window.self !== window.top; }catch(e){ return true; } })();
+function renderBanners(){
+  const b = [];
+  if(IN_FRAME) b.push('<div class="banner warn"><b>You’re viewing this inside a preview window, which blocks the microphone.</b> Download the file and open it directly in Microsoft Edge or Google Chrome.</div>');
+  if(!SR) b.push('<div class="banner warn"><b>This browser can’t listen to you.</b> Open this file in <b>Microsoft Edge</b> or <b>Google Chrome</b> (desktop or Android) for spoken feedback. Until then you can still listen and mark yourself.</div>');
+  const natural = v => v && /natural|online|neural|premium|enhanced/i.test(v.name);
+  if(synth && voices.length && heVoices.length && (!natural(pickVoice(false)) || !natural(pickEn())))
+    b.push(/iPhone|iPad|iPod/i.test(navigator.userAgent)
+      ? '<div class="banner info"><b>Want a more natural voice?</b> On iPhone go to Settings › Accessibility › Spoken Content › Voices, then download <b>Carmit (Enhanced)</b> under Hebrew and <b>Ava (Premium)</b> under English. The teacher picks them automatically.</div>'
+      : /Android/i.test(navigator.userAgent)
+      ? '<div class="banner info"><b>Want a more natural voice?</b> On Android open Settings › Text-to-speech, choose Speech Services by Google, and install the high-quality Hebrew voice data.</div>'
+      : '<div class="banner info"><b>Want a more natural voice?</b> This browser only has basic built-in voices. Open the file in <b>Microsoft Edge</b>, which includes natural female voices (Hila for Hebrew, Ava for English). The teacher picks them automatically.</div>');
+  if(synth && voices.length && !heVoices.length) b.push('<div class="banner warn"><b>No Hebrew voice found on this device.</b> Microsoft Edge has natural Hebrew voices built in (Avri, Hila). On Windows you can also add the Hebrew language pack; on Mac, the “Carmit” voice under Accessibility › Spoken Content.</div>');
+  $("#banners").innerHTML = b.join("");
+}
+/* Hebrew split into words with per-word transliteration, when counts line up */
+function wordPairs(he, tr){
+  const hw = fill(he).split(/\s+/), tw = fill(tr).split(/\s+/);
+  return hw.map((h,i) => ({ h, t: hw.length === tw.length ? tw[i] : "" }));
+}
+function trForWord(normWord, he, tr){
+  const pairs = wordPairs(he, tr);
+  const hit = pairs.find(p => norm(p.h) === normWord);
+  return hit ? hit : { h: normWord, t:"" };
+}
+
+/* feedback block */
+function feedbackHTML(res, he, tr, opts={}){
+  if(res.error) return `<div class="fb bad"><div class="verdict">Let’s try that again</div><div class="tip">${esc(errorText(res.error))}</div></div>`;
+  const pct = Math.round(res.score * 100);
+  const head = res.verdict === "good" ? (pct >= 97 ? "Perfect!" : "Great — that’s right!") : res.verdict === "close" ? "Close! Fix the red words" : "Not quite — listen and try again";
+  const chips = res.words.map(x => {
+    const p = trForWord(x.w, opts.targetHe || he, opts.targetTr || tr);
+    return `<span class="w ${x.ok?'ok':'miss'}"><span class="t">${esc(p.t || "")}</span>${S.settings.showHebrew || !p.t ? `<span class="wh he">${esc(p.h.replace(/[!?.,]/g,""))}</span>`:""}${x.ok?"":`<button data-say="${esc(p.h)}" title="Hear this word">${ICON.spk}</button>`}</span>`;
+  }).join("");
+  const tip = res.verdict === "good" ? "" : `<div class="tip">Tap ${ICON.spk} on a red word to hear it alone, then say the whole phrase again.</div>`;
+  return `<div class="fb ${res.verdict}"><div class="verdict"><span>${head}</span><span class="score">${pct}%</span></div>
+    <div class="words">${chips}</div>${tip}
+    <div class="heard">I heard: <span class="he">${esc(res.heard || "—")}</span></div></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-say]");
+  if(b){ e.preventDefault(); speak(b.getAttribute("data-say"), { slow: b.hasAttribute("data-slow"), partner: b.hasAttribute("data-partner") }); }
+});
+
+/* =========================================================
+   ROUTER
+   ========================================================= */
+let view = { name:"home" };
+function go(v){ killTeacher(); view = v; render(); window.scrollTo(0,0); }
+function render(){
+  renderStreak(); renderBanners();
+  if(view.name === "home") renderHome();
+  else if(view.name === "lesson") renderLesson();
+  else if(view.name === "review") renderReviewTeacher();
+}
+
+/* ---------------- HOME ---------------- */
+function renderHome(){
+  const due = dueList();
+  const anyLearned = LEVELS.some((_,li) => lstat(li).learn);
+  const reviewCard = anyLearned ? `
+    <div class="card review">
+      <div><h3>${due.length ? `Daily review · ${due.length} phrase${due.length>1?"s":""} due` : "You’re all caught up"}</h3>
+      <p>${due.length ? "Your teacher asks in English, you answer out loud in Hebrew. Spaced review is what makes it stick." : "New review phrases appear as you learn. Come back tomorrow."}</p></div>
+      <button class="btn primary" id="reviewBtn" ${due.length?"":"disabled"}>Review</button>
+    </div>` : "";
+  const cards = LEVELS.map((L, li) => {
+    const open = unlocked(li), l = lstat(li), done = levelDone(li), pr = levelProgress(li);
+    return `<button class="card level ${open?"":"locked"} ${done?"done":""}" data-level="${li}" ${open?"":"disabled"}>
+      <div class="lvnum">${open ? (done ? ICON.check : li+1) : ICON.lock}</div>
+      <div class="lvbody">
+        <h3>${esc(L.title)} <span class="he">${esc(L.he)}</span></h3>
+        <p>${esc(L.desc)}</p>
+        <div class="bar"><i style="width:${pr}%"></i></div>
+        <div class="steps-mini"><span class="${l.learn?"ok":""}">Listen & repeat</span><span class="${l.recall?"ok":""}">Recall</span><span class="${l.talk?"ok":""}">Conversation</span></div>
+      </div></button>`;
+  }).join("");
+  app.innerHTML = `
+    <section class="hero"><h1>Speak Hebrew with a teacher who talks back.</h1>
+    <p>Each lesson is spoken: your teacher says a phrase, listens to you repeat it, corrects you out loud, quizzes you, then has a real conversation with you. Finish the lesson to unlock the next level.</p></section>
+    ${reviewCard}
+    <div class="levels">${cards}</div>`;
+  app.querySelectorAll("[data-level]").forEach(b => b.onclick = () => {
+    go({ name:"lesson", li:+b.dataset.level, tab:"teach" });
+  });
+  const rb = $("#reviewBtn"); if(rb) rb.onclick = () => go({ name:"review" });
+}
+
+/* ---------------- LESSON SHELL ---------------- */
+function renderLesson(){
+  const L = LEVELS[view.li], l = lstat(view.li);
+  const tabs = [["teach","Teacher",levelDone(view.li)],["learn","Repeat",l.learn],["recall","Recall",l.recall],["talk","Chat",l.talk]];
+  app.innerHTML = `
+    <div class="lesson-head"><button class="iconbtn" id="backBtn" aria-label="Back">${ICON.back}</button>
+      <div><h2>Level ${view.li+1}: ${esc(L.title)}</h2><div class="he">${esc(L.he)}</div></div></div>
+    <div class="tabs">${tabs.map(([k,lab,ok]) => `<button class="tab ${view.tab===k?"active":""}" data-tab="${k}">${ok?'<span class="ck">✓</span>':""}${lab}</button>`).join("")}</div>
+    <div id="stageWrap"></div>`;
+  $("#backBtn").onclick = () => go({ name:"home" });
+  app.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { if(b.dataset.tab === view.tab) return; killTeacher(); view.tab = b.dataset.tab; delete view.drill; delete view.talk; renderLesson(); });
+  if(view.tab === "teach"){
+    if(!T || T.kind !== "level" || T.li !== view.li) teacherStart({ kind:"level", li:view.li });
+    renderTeacher($("#stageWrap"));
+  }
+  else if(view.tab === "learn") startLearn();
+  else if(view.tab === "recall") startRecall();
+  else startTalk();
+}
+
+/* ---------------- DRILL (learn / recall / review) ----------------
+   mode "learn": shows everything, you repeat after the voice.
+   mode "recall": shows English, you say it from memory.          */
+function startLearn(){
+  if(!view.drill || view.drill.mode !== "learn"){
+    view.drill = { mode:"learn", queue: LEVELS[view.li].phrases.map((_,pi)=>[view.li,pi]), i:0, passed:{}, tries:0, res:null, revealed:true };
+  }
+  renderDrill(true);
+}
+function startRecall(){
+  if(!view.drill || view.drill.mode !== "recall"){
+    const q = LEVELS[view.li].phrases.map((_,pi)=>[view.li,pi]); shuffle(q);
+    view.drill = { mode:"recall", queue:q, i:0, passed:{}, tries:0, res:null, revealed:false, hinted:false, total:q.length };
+  }
+  renderDrill(true);
+}
+function startReview(){
+  const q = dueList().slice(0, 12); shuffle(q);
+  view = { name:"review", drill:{ mode:"recall", review:true, queue:q, i:0, passed:{}, tries:0, res:null, revealed:false, hinted:false, total:q.length } };
+  render();
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; }
+
+function drillContainer(){
+  if(view.name === "review"){
+    if(!$("#stageWrap")){
+      app.innerHTML = `<div class="lesson-head"><button class="iconbtn" id="backBtn" aria-label="Back">${ICON.back}</button><div><h2>Daily review</h2><div class="he">חזרה יומית</div></div></div><div id="stageWrap"></div>`;
+      $("#backBtn").onclick = () => go({ name:"home" });
+    }
+  }
+  return $("#stageWrap");
+}
+
+function renderDrill(autoplay){
+  const d = view.drill, box = drillContainer();
+  if(d.i >= d.queue.length){ return drillDone(); }
+  const [li, pi] = d.queue[d.i]; const p = phrase(li, pi);
+  const learn = d.mode === "learn";
+  const show = learn || d.revealed;
+  const uniq = d.total || LEVELS[view.li||0].phrases.length;
+  const dots = learn ? d.queue.map((q,k)=>`<i class="${d.passed[pid(...q)]?"ok":(k===d.i?"on":"")}"></i>`).join("") : "";
+  const passedCount = Object.keys(d.passed).length;
+  const canNext = d.res && (d.res.verdict === "good" || d.tries >= 3 || d.selfOk);
+  box.innerHTML = `
+    <div class="card stage">
+      <div class="counter"><span>${learn ? "Listen, then say it out loud" : (d.review ? "Say it in Hebrew" : "Say it in Hebrew — from memory")}</span><span>${learn ? (d.i+1)+" / "+d.queue.length : passedCount+" / "+uniq+" done"}</span></div>
+      ${learn ? `<div class="dots">${dots}</div>` : ""}
+      ${learn ? "" : `<div class="prompt-en">How do you say…</div><div class="big-en">${esc(fill(p.en))}</div>`}
+      ${show ? `<div class="translit">${esc(fill(p.tr))}</div>
+                ${S.settings.showHebrew ? `<div class="heline he">${esc(fill(p.he))}</div>` : ""}
+                ${learn ? `<div class="meaning">${esc(fill(p.en))}</div>` : ""}`
+             : `<button class="btn ghost small" id="hintBtn">Show hint</button>${d.hinted?`<div class="hint-note">Starts with: <b>${esc(fill(p.tr).split(/\s+/)[0])}</b></div>`:""}`}
+      <div class="controls">
+        <button class="round" id="playBtn" title="Play (P)" ${show?"":"disabled"}>${ICON.play}</button>
+        <button class="mic" id="micBtn" title="Speak (Space)">${ICON.mic}</button>
+        <button class="round" id="slowBtn" title="Play slowly (S)" ${show?"":"disabled"}>${ICON.slow}</button>
+      </div>
+      <div class="ctl-labels"><span>Play</span><span class="m">Speak</span><span>Slow</span></div>
+      <div class="interim he" id="interim"></div>
+      <div id="fb">${d.res ? feedbackHTML(d.res, p.he, p.tr) : ""}</div>
+      ${!SR ? `<div class="row" style="justify-content:center;margin-top:12px"><button class="btn ghost small" id="selfOk">I said it right</button><button class="btn ghost small" id="selfBad">I need more practice</button></div>` : ""}
+      <div class="nav">
+        <button class="btn ghost" id="skipBtn">${learn ? "Skip" : "I don’t know"}</button>
+        <button class="btn primary" id="nextBtn" ${canNext?"":"disabled"}>${d.res && d.res.verdict!=="good" && d.tries>=3 && !d.selfOk ? "Move on" : "Next"}</button>
+      </div>
+      <div class="kbd"><b>Space</b> speak · <b>P</b> play · <b>S</b> slow · <b>Enter</b> next</div>
+    </div>`;
+  const sayFull = slow => speak(fill(p.he), { slow });
+  $("#playBtn").onclick = () => sayFull(false);
+  $("#slowBtn").onclick = () => sayFull(true);
+  const hb = $("#hintBtn"); if(hb) hb.onclick = () => { if(!d.hinted){ d.hinted = true; } else { d.revealed = true; } renderDrill(); };
+  $("#micBtn").onclick = () => drillListen(p);
+  $("#skipBtn").onclick = () => {
+    if(learn){ advance(); return; }
+    d.revealed = true; d.failedOnce = true; d.res = null; demote(p.id); renderDrill(); sayFull(false);
+  };
+  $("#nextBtn").onclick = () => advance();
+  const so = $("#selfOk"); if(so) so.onclick = () => { d.selfOk = true; d.res = { verdict:"good", score:1, words:[], heard:"(self-checked)" }; markResult(p, true); renderDrill(); };
+  const sb = $("#selfBad"); if(sb) sb.onclick = () => { d.revealed = true; d.tries = 3; d.res = { verdict:"bad", score:0, words:[], heard:"(self-checked)" }; markResult(p, false); renderDrill(); sayFull(true); };
+  if(autoplay && show) setTimeout(() => sayFull(false), 250);
+  if(autoplay && !show) {}
+  pstat(p.id).seen = pstat(p.id).seen || 1; save();
+}
+async function drillListen(p){
+  const d = view.drill, mic = $("#micBtn");
+  if(listening){ stopListening(); return; }
+  mic.classList.add("listening"); mic.innerHTML = ICON.stop;
+  $("#interim").textContent = "Listening…";
+  const r = await listen(t => { const el = $("#interim"); if(el) el.textContent = t; });
+  if(view.drill !== d) return;
+  let res;
+  if(r.error && !r.alts.length) res = { error:r.error };
+  else { res = evaluate([fill(p.he)], r.alts); }
+  d.res = res;
+  if(!res.error){ d.tries++; S.history.attempts++; if(res.verdict === "good"){ S.history.correct++; markResult(p, true); } else if(d.tries === 1 && d.mode === "recall") markResult(p, false); }
+  save();
+  renderDrill();
+  if(!res.error && res.verdict !== "good" && (d.mode === "learn" || d.revealed)){ setTimeout(() => speak(fill(p.he), { slow:true }), 400); }
+  if(!res.error && res.verdict !== "good" && d.mode === "recall" && !d.revealed && d.tries >= 1){ d.revealed = true; renderDrill(); setTimeout(() => speak(fill(p.he)), 400); }
+}
+function markResult(p, ok){
+  const d = view.drill;
+  if(ok){
+    bumpStreak();
+    if(d.mode === "learn"){ if(!d.passed[p.id]){ const s = pstat(p.id); s.seen = 1; if(s.box < 1){ s.box = 1; s.due = Date.now() + DAY - 3600000; } s.ok++; save(); } }
+    else { const clean = !d.revealed && !d.hinted && !d.failedOnce; if(clean) promote(p.id, true); else { const s = pstat(p.id); s.tries++; s.due = 0; save(); } }
+    d.passed[p.id] = d.passed[p.id] || (d.mode === "learn" ? true : !d.revealed && !d.failedOnce);
+  } else {
+    d.failedOnce = true; demote(p.id);
+  }
+}
+function advance(){
+  const d = view.drill; const [li,pi] = d.queue[d.i]; const id = pid(li,pi);
+  if(d.mode === "recall" && !d.passed[id]){
+    // not passed cleanly: send it to the back of the queue to try again
+    d.queue.push(d.queue[d.i]);
+  }
+  d.i++; d.res = null; d.tries = 0; d.revealed = false; d.hinted = false; d.failedOnce = false; d.selfOk = false;
+  renderDrill(true);
+}
+function drillDone(){
+  const d = view.drill, box = drillContainer();
+  let title, msg, btn;
+  if(d.review){ title = "Review complete"; msg = "Phrases you got right will come back later; the tricky ones come back sooner."; btn = `<button class="btn primary" id="homeBtn">Back to levels</button>`; }
+  else if(d.mode === "learn"){ lstat(view.li).learn = true; save(); title = "You’ve said every phrase!"; msg = "Next: say them from memory, with only the English as a prompt."; btn = `<button class="btn primary" id="nextTab">Start Recall</button>`; }
+  else { lstat(view.li).recall = true; save(); title = "Recall complete!"; msg = "Now use these phrases in a real conversation."; btn = `<button class="btn primary" id="nextTab">Start Conversation</button>`; }
+  box.innerHTML = `<div class="card done-box"><div class="big-check">${ICON.check}</div><h3>${title}</h3><p style="color:var(--muted)">${msg}</p><div class="row" style="justify-content:center;margin-top:14px">${btn}</div></div>`;
+  const hb = $("#homeBtn"); if(hb) hb.onclick = () => go({ name:"home" });
+  const nt = $("#nextTab"); if(nt) nt.onclick = () => { view.tab = d.mode === "learn" ? "recall" : "talk"; delete view.drill; renderLesson(); };
+  if(view.name === "lesson"){ const tabsEl = app.querySelectorAll(".tab"); const l = lstat(view.li); [l.learn,l.recall,l.talk].forEach((ok,i)=>{ if(ok && !tabsEl[i].querySelector(".ck")) tabsEl[i].insertAdjacentHTML("afterbegin",'<span class="ck">✓</span>'); }); }
+}
+
+/* ---------------- CONVERSATION ---------------- */
+function startTalk(){
+  if(!view.talk) view.talk = { i:0, log:[], tries:0, res:null, showModel:false, started:false };
+  renderTalk();
+}
+function renderTalk(){
+  const t = view.talk, L = LEVELS[view.li], T = L.talk, box = $("#stageWrap");
+  const steps = T.steps;
+  const done = t.i >= steps.length;
+  const bubbles = t.log.map(m => m.who === "them"
+    ? `<div class="msg them"><div class="who">${esc(T.partner)}</div><div class="tl">${esc(fill(m.tr))}</div>${S.settings.showHebrew?`<div class="hh he">${esc(fill(m.he))}</div>`:""}<div class="ee">${esc(m.en)}</div><button class="play" data-say="${esc(fill(m.he))}" data-partner title="Play again">${ICON.play}</button></div>`
+    : `<div class="msg me"><div class="who">You</div><div class="hh he">${esc(m.heard)}</div></div>`).join("");
+  let turn = "";
+  if(!t.started){
+    turn = `<div class="your-turn"><div class="lbl">${esc(T.scene)}</div><p style="margin:6px 0 12px">You’ll chat with <b>${esc(T.partner)}</b>, a ${esc(T.role)}. Listen, then answer out loud. Any natural answer that fits is fine.</p><button class="btn primary" id="startTalk">Start conversation</button></div>`;
+  } else if(!done){
+    const st = stepLines(steps[t.i]);
+    turn = `<div class="your-turn">
+      <div class="lbl">Your turn — answer ${esc(T.partner)}</div>
+      <div class="controls" style="margin:10px 0 4px">
+        <button class="round" id="againBtn" title="Hear again (P)">${ICON.play}</button>
+        <button class="mic" id="micBtn" title="Speak (Space)">${ICON.mic}</button>
+        <button class="round" id="slowBtn" title="Slowly (S)">${ICON.slow}</button>
+      </div>
+      <div class="ctl-labels"><span>Again</span><span class="m">Answer</span><span>Slow</span></div>
+      <div class="interim he" id="interim"></div>
+      <div id="fb">${t.res ? talkFeedback(t.res, st) : ""}</div>
+      ${t.showModel ? `<div class="model"><div style="font-size:13px;color:var(--muted)">${st.open?"One way to answer":"You could say"}</div><div class="tl" style="font-weight:600;color:var(--olive);font-size:18px">${esc(fill(st.m[1]))} <button data-say="${esc(fill(st.m[0]))}" style="color:var(--blue)">${ICON.spk}</button></div>${S.settings.showHebrew?`<div class="he" style="font-size:19px">${esc(fill(st.m[0]))}</div>`:""}<div style="font-size:13px;color:var(--muted)">${esc(fill(st.m[2]))}</div></div>` : ""}
+      <div class="row" style="justify-content:center;margin-top:12px">
+        ${t.showModel ? "" : `<button class="btn ghost small" id="modelBtn">Help me answer</button>`}
+        ${!SR || t.tries >= 3 ? `<button class="btn ghost small" id="skipTurn">${!SR ? "I said it" : "Continue anyway"}</button>` : ""}
+      </div>
+    </div>`;
+  } else {
+    turn = `<div class="card done-box" style="margin-top:14px;box-shadow:none"><div class="big-check">${ICON.check}</div><h3>Conversation complete!</h3><p style="color:var(--muted)">${view.li < LEVELS.length-1 ? `Level ${view.li+2} is unlocked.` : "You’ve finished every level. Keep up the daily review, and replay conversations to get faster."}</p>
+      <div class="row" style="justify-content:center;margin-top:12px"><button class="btn ghost" id="replayTalk">Replay</button>${view.li < LEVELS.length-1 ? `<button class="btn primary" id="nextLevel">Go to Level ${view.li+2}</button>` : `<button class="btn primary" id="homeBtn2">Back to levels</button>`}</div></div>`;
+  }
+  box.innerHTML = `<div class="card stage" style="text-align:left"><div class="chat" id="chat">${bubbles}</div>${turn}</div>`;
+  const sb = $("#startTalk"); if(sb) sb.onclick = () => { t.started = true; partnerSays(); };
+  const ag = $("#againBtn"); if(ag) ag.onclick = () => speak(fill(stepLines(steps[t.i]).p[0]), { partner:true });
+  const sl = $("#slowBtn"); if(sl) sl.onclick = () => speak(fill(stepLines(steps[t.i]).p[0]), { partner:true, slow:true });
+  const mb = $("#modelBtn"); if(mb) mb.onclick = () => { t.showModel = true; t.helped = true; renderTalk(); speak(fill(stepLines(steps[t.i]).m[0]), { slow:true }); };
+  const mic = $("#micBtn"); if(mic) mic.onclick = () => talkListen();
+  const sk = $("#skipTurn"); if(sk) sk.onclick = () => { const st = stepLines(steps[t.i]); finishTurn(t.res && t.res.heard && hasHebrew(t.res.heard) ? t.res.heard : fill(st.m[0])); };
+  const rp = $("#replayTalk"); if(rp) rp.onclick = () => { view.talk = null; startTalk(); };
+  const nl = $("#nextLevel"); if(nl) nl.onclick = () => go({ name:"lesson", li:view.li+1, tab:"learn" });
+  const h2 = $("#homeBtn2"); if(h2) h2.onclick = () => go({ name:"home" });
+}
+function talkFeedback(res, st){
+  if(res.error) return feedbackHTML(res);
+  if(st.open){
+    return res.verdict === "good"
+      ? `<div class="fb good"><div class="verdict">Nice answer!</div><div class="heard">I heard: <span class="he">${esc(res.heard)}</span></div></div>`
+      : `<div class="fb bad"><div class="verdict">I couldn’t make that out in Hebrew</div><div class="tip">Try again, or tap “Help me answer”.</div></div>`;
+  }
+  const tgt = res.target || fill(st.a[0]);
+  // find transliteration for the matched answer if it is the model answer
+  const mHe = fill(st.m[0]), mTr = fill(st.m[1]);
+  return feedbackHTML(res, tgt, "", { targetHe: mHe.includes(tgt.split(" ")[0]) ? mHe : tgt, targetTr: mHe.includes(tgt.split(" ")[0]) ? mTr : "" });
+}
+async function partnerSays(){
+  const t = view.talk, st = stepLines(LEVELS[view.li].talk.steps[t.i]);
+  t.log.push({ who:"them", he:st.p[0], tr:st.p[1], en:st.p[2] });
+  t.res = null; t.tries = 0; t.showModel = false; t.helped = false;
+  renderTalk(); scrollChat();
+  await speak(fill(st.p[0]), { partner:true });
+}
+function scrollChat(){ const yt = document.querySelector(".your-turn"); if(yt) yt.scrollIntoView({ behavior:"smooth", block:"center" }); }
+async function talkListen(){
+  const t = view.talk, st = stepLines(LEVELS[view.li].talk.steps[t.i]), mic = $("#micBtn");
+  if(listening){ stopListening(); return; }
+  mic.classList.add("listening"); mic.innerHTML = ICON.stop; $("#interim").textContent = "Listening…";
+  const r = await listen(x => { const el = $("#interim"); if(el) el.textContent = x; });
+  if(view.talk !== t) return;
+  let res;
+  if(r.error && !r.alts.length) res = { error:r.error };
+  else if(st.open){ const h = r.alts.find(hasHebrew) || r.alts[0] || ""; res = { verdict: hasHebrew(h) ? "good" : "bad", heard:h, score:1, words:[] }; }
+  else res = evaluate(st.a.map(fill), r.alts);
+  t.res = res; if(!res.error) t.tries++;
+  if(!res.error && res.verdict === "good"){ bumpStreak(); renderTalk(); setTimeout(() => finishTurn(res.heard), 900); }
+  else { renderTalk(); if(!res.error && res.verdict !== "good" && t.tries >= 2 && !t.showModel){ t.showModel = true; renderTalk(); } }
+}
+function finishTurn(heard){
+  const t = view.talk; t.log.push({ who:"me", heard }); t.i++;
+  if(t.i >= LEVELS[view.li].talk.steps.length){ lstat(view.li).talk = true; save(); renderTalk(); const tabsEl = app.querySelectorAll(".tab"); if(tabsEl[2] && !tabsEl[2].querySelector(".ck")) tabsEl[2].insertAdjacentHTML("afterbegin",'<span class="ck">✓</span>'); scrollChat(); return; }
+  setTimeout(partnerSays, 350);
+}
+
+/* =========================================================
+   TEACHER — a hands-free spoken lesson.
+   The teacher talks (English + Hebrew), listens to you automatically,
+   corrects you out loud, quizzes you, then role-plays a conversation.
+   ========================================================= */
+const ABORT = { abort:true };
+let T = null;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const enMeaning = s => fill(s).replace(/\s*\/\s*/g, ", or ").replace(/[“”]/g, "");
+const HE_PRAISE = [["כל הכבוד!","kol ha-ka-VOD!","Well done!"],["מצוין!","me-tsu-YAN!","Excellent!"],["יופי!","YO-fi!","Nice!"],["מעולה!","me-u-LE!","Great!"]];
+const EN_PRAISE = ["Great!","Perfect.","Very good.","Yes, exactly.","Nice!","That’s it!"];
+function praise(tries){
+  if(tries > 1) return [{ en: pick(["There you go!","Much better.","Yes! You got it."]) }];
+  if(Math.random() < 0.4){ const p = pick(HE_PRAISE); return [{ he:p[0], tr:p[1], gloss:p[2] }]; }
+  return [{ en: pick(EN_PRAISE) }];
+}
+const REPEAT_INTROS = [e => `Here’s how to say "${e}".`, e => `Next: "${e}".`, e => `Now let’s learn "${e}".`, e => `This one means "${e}".`];
+
+function buildLevelScript(li){
+  const L = LEVELS[li], n = L.phrases.length, beats = [];
+  const say = (...segs) => beats.push({ t:"say", segs });
+  say({ he:"שלום!", tr:"sha-LOM!", gloss:"Hello!" }, { en:`Welcome to level ${li+1}: ${L.title}. ${L.desc}` });
+  if(li === 0){
+    say({ en:"Here’s how this works. I’ll teach you a phrase in Hebrew, you say it out loud, and I’ll tell you how you did. If you want to hear something again, just say" }, { he:"עוד פעם", tr:"od PA-am", gloss:"again" }, { en:"It means: again. Let’s start!" });
+  } else {
+    say({ en:"First, a quick warm-up from last time." });
+    const prev = LEVELS[li-1].phrases.length;
+    [ (li*3) % prev, (li*3 + 4) % prev ].forEach(pi => beats.push({ t:"recall", li:li-1, pi }));
+    say({ en:"Good. Now, the new phrases." });
+  }
+  const idx = [...Array(n).keys()], chunks = [];
+  for(let i = 0; i < n; i += 3) chunks.push(idx.slice(i, i+3));
+  if(chunks.length > 1 && chunks[chunks.length-1].length === 1){ const last = chunks.pop(); chunks[chunks.length-1].push(...last); }
+  let k = 0;
+  chunks.forEach((ch, ci) => {
+    ch.forEach((pi, j) => beats.push({ t:"repeat", li, pi, first: ci === 0 && j === 0, k: k++ }));
+    say({ en: ["Now, from memory.","Let’s see what you remember.","Quick check. No hints this time.","Your turn to remember."][ci % 4] });
+    [...ch].reverse().forEach(pi => beats.push({ t:"recall", li, pi }));
+  });
+  const Tk = L.talk;
+  say({ en:`Now let’s use it in a real conversation. ${Tk.scene} I’ll play ${Tk.partner}, the ${Tk.role}. Answer me in Hebrew. Here we go.` });
+  Tk.steps.forEach((_, si) => beats.push({ t:"reply", li, si }));
+  say({ he:"כל הכבוד!", tr:"kol ha-ka-VOD!", gloss:"Well done!" }, { en:`That means "well done". You’ve finished level ${li+1}.` + (li < LEVELS.length-1 ? ` Next up: ${LEVELS[li+1].title}.` : " That’s every level. Keep doing your daily review.") });
+  beats.push({ t:"complete", li });
+  return beats;
+}
+function buildReviewScript(){
+  const q = dueList().slice(0, 12); shuffle(q);
+  const beats = [{ t:"say", segs:[{ en:`Time for your daily review: ${q.length} phrase${q.length===1?"":"s"}. I’ll say it in English, you say it in Hebrew.` }] }];
+  q.forEach(([li,pi]) => beats.push({ t:"recall", li, pi }));
+  beats.push({ t:"say", segs:[{ en:"Great work. That’s your review for today." }, { he:"להתראות!", tr:"le-hit-ra-OT!", gloss:"See you!" }] });
+  return beats;
+}
+
+function teacherStart(cfg){
+  if(T) T.id++;
+  const beats = cfg.kind === "level" ? buildLevelScript(cfg.li) : buildReviewScript();
+  T = Object.assign({}, cfg, { beats, i:0, id:0, paused:true, started:false, done:false, log:[], cardHTML:"", fbHTML:"", status:"idle", msg:"", noSpeech:0 });
+  if(cfg.kind === "level"){ const pos = lstat(cfg.li).pos || 0; if(pos > 0 && pos < beats.length) T.resumeAt = pos; }
+}
+function chk(id){ if(!T || T.id !== id) throw ABORT; }
+function tPause(msg){
+  if(!T) return;
+  T.id++; T.paused = true; T.msg = msg || "";
+  try{ synth && synth.cancel(); }catch(e){}
+  stopListening(); setStatus("paused"); renderTControls();
+}
+function tResume(){ if(!T) return; T.msg = ""; T.started = true; runTeacher(); }
+function tRestartBeat(){ if(!T || T.done) return; tPause(); tResume(); }
+function tSkip(){ if(!T || T.done) return; tPause(); T.i = Math.min(T.i + 1, T.beats.length); tResume(); }
+async function runTeacher(){
+  const id = ++T.id; T.paused = false; renderTControls();
+  try{
+    while(T.i < T.beats.length){
+      await doBeat(T.beats[T.i], id); chk(id);
+      T.i++;
+      if(T.kind === "level"){ lstat(T.li).pos = T.i < T.beats.length ? T.i : 0; save(); }
+      await sleep(250); chk(id);
+    }
+    T.done = true; T.paused = true; setStatus("idle"); renderTControls(); showDone();
+  }catch(e){ if(e !== ABORT) console.error(e); }
+}
+async function doBeat(b, id){
+  if(b.t === "say") return tSay(b.segs, id);
+  if(b.t === "repeat"){
+    const p = phrase(b.li, b.pi), en = enMeaning(p.en);
+    const intro = b.first ? `First phrase: "${en}".` : REPEAT_INTROS[b.k % REPEAT_INTROS.length](en);
+    const ok = await doRepeat(p, id, [{ en:intro }, { he:fill(p.he), tr:fill(p.tr) }, { en: pick(["Your turn.","Now you.","Say it."]) }], "repeat");
+    const s = pstat(p.id); s.seen = 1; if(ok && s.box < 1){ s.box = 1; s.due = Date.now() + DAY - 3600000; } if(!ok){ s.due = 0; } save();
+    return;
+  }
+  if(b.t === "recall") return doRecall(b.li, b.pi, id);
+  if(b.t === "reply") return doReply(b.li, b.si, id);
+  if(b.t === "complete"){ const l = lstat(b.li); l.learn = l.recall = l.talk = true; l.pos = 0; save(); return; }
+}
+
+/* speaking & listening with captions */
+async function tSay(segs, id){
+  addBubble("teach", segsHTML(segs));
+  setStatus("speaking");
+  for(const s of segs){
+    if(s.en){ for(const part of s.en.split(/(?<=[.!?])\s+/)){ await speak(part, { lang:"en" }); chk(id); } }
+    else { await speak(fill(s.he), { slow:s.slow, partner:s.partner, g:s.g }); chk(id); }
+  }
+}
+async function tHear(id){
+  await sleep(180); chk(id);
+  setStatus("listening"); setInterim("");
+  const r = await listen(x => setInterim(x));
+  chk(id); setStatus("idle"); setInterim("");
+  return r;
+}
+async function handleErr(r, id, retrySegs){
+  if(r.error === "no-speech" || r.error === "aborted"){
+    T.noSpeech++;
+    if(T.noSpeech >= 3){ T.noSpeech = 0; tPause("I didn’t hear anything for a while, so I paused. Press Resume when you’re ready."); chk(id); }
+    await tSay(retrySegs, id); return;
+  }
+  tPause(errorText(r.error)); chk(id);
+}
+function isAgain(alts, targetHe){
+  const t = norm(targetHe);
+  if(t.includes("פעמ") || t === "שוב") return false;
+  return alts.some(a => { const n = norm(a); return n === "שוב" || n === "עוד" || n.includes("עוד פעמ") || n.includes("עוד פעם"); });
+}
+function stat(res){ S.history.attempts++; if(res.verdict === "good") S.history.correct++; save(); }
+
+async function doRepeat(p, id, firstSegs, mode){
+  const he = fill(p.he), tr = fill(p.tr);
+  showCard({ mode, p }); T.fbHTML = ""; setFb("");
+  await tSay(firstSegs, id);
+  let tries = 0;
+  while(true){
+    const r = await tHear(id);
+    if(r.error && !r.alts.length){ await handleErr(r, id, [{ en:"I didn’t hear you. Say:" }, { he, tr }]); continue; }
+    T.noSpeech = 0;
+    if(isAgain(r.alts, he)){ addBubble("me", heardHTML(r.alts[0])); await tSay([{ he, tr, slow:true }], id); continue; }
+    const res = evaluate([he], r.alts); tries++; stat(res);
+    addBubble("me", heardHTML(res.heard, res.verdict)); setFb(feedbackHTML(res, p.he, p.tr));
+    if(res.verdict === "good"){ bumpStreak(); await tSay(praise(tries), id); return tries === 1; }
+    if(tries >= 3){ await tSay([{ en:"That one’s tricky. Let’s keep going, and we’ll practise it again later." }], id); return false; }
+    if(res.verdict === "close"){
+      const miss = res.words.filter(w => !w.ok).slice(0, 2).map(w => trForWord(w.w, he, tr));
+      const segs = [{ en: miss.length > 1 ? "Almost! Listen to these words:" : "Almost! Listen to this word:" }];
+      miss.forEach(m => segs.push({ he:m.h.replace(/[!?.,]/g,""), tr:m.t, slow:true }));
+      segs.push({ en:"Now the whole thing:" }, { he, tr }, { en:"Again." });
+      await tSay(segs, id);
+    } else {
+      await tSay([{ en: tries === 1 ? "Not quite. Listen carefully." : "Listen once more, slowly." }, { he, tr, slow:true }, { en:"Your turn." }], id);
+    }
+  }
+}
+async function doRecall(li, pi, id){
+  const p = phrase(li, pi), he = fill(p.he), tr = fill(p.tr), en = enMeaning(p.en);
+  showCard({ mode:"recall", p, hidden:true }); setFb("");
+  const ask = pick([`How do you say "${en}"?`, `What’s the Hebrew for "${en}"?`, `Tell me in Hebrew: "${en}".`]);
+  await tSay([{ en:ask }], id);
+  while(true){
+    const r = await tHear(id);
+    if(r.error && !r.alts.length){ await handleErr(r, id, [{ en:`I didn’t hear you. How do you say "${en}"?` }]); continue; }
+    T.noSpeech = 0;
+    if(isAgain(r.alts, he)){ addBubble("me", heardHTML(r.alts[0])); await tSay([{ en:ask }], id); continue; }
+    const res = evaluate([he], r.alts); stat(res);
+    addBubble("me", heardHTML(res.heard, res.verdict));
+    showCard({ mode:"recall", p, hidden:false }); setFb(feedbackHTML(res, p.he, p.tr));
+    const s = pstat(p.id); s.seen = 1;
+    if(res.verdict === "good"){ promote(p.id, true); bumpStreak(); await tSay(praise(1), id); return; }
+    demote(p.id);
+    const first = res.verdict === "close"
+      ? [{ en:"Close! It’s" }, { he, tr }, { en:"Say it again." }]
+      : [{ en:"Not quite. It’s" }, { he, tr, slow:true }, { en:"Repeat after me:" }, { he, tr }, { en:"Your turn." }];
+    await doRepeat(p, id, first, "fix");
+    return;
+  }
+}
+async function doReply(li, si, id){
+  const Tk = LEVELS[li].talk, st = stepLines(Tk.steps[si]);
+  const ph = fill(st.p[0]), pt = fill(st.p[1]), m = fill(st.m[0]), mt = fill(st.m[1]);
+  const partnerSay = async slow => { addBubble("them", partnerHTML(Tk.partner, st.p)); setStatus("speaking"); await speak(ph, { partner:true, g:Tk.g, slow }); chk(id); };
+  showCard({ mode:"reply", st, partner:Tk.partner }); setFb("");
+  await partnerSay(false);
+  let tries = 0;
+  while(true){
+    const r = await tHear(id);
+    if(r.error && !r.alts.length){ await handleErr(r, id, [{ en:`I didn’t hear you. ${Tk.partner} said:` }, { he:ph, tr:pt, partner:true, g:Tk.g }]); continue; }
+    T.noSpeech = 0;
+    if(isAgain(r.alts, ph)){ addBubble("me", heardHTML(r.alts[0])); await partnerSay(true); continue; }
+    tries++;
+    if(st.open){
+      const h = r.alts.find(hasHebrew);
+      if(h){ addBubble("me", heardHTML(h, "good")); bumpStreak(); S.history.attempts++; S.history.correct++; save(); return; }
+      addBubble("me", heardHTML(r.alts[0] || "", "bad"));
+      if(tries >= 3){ await tSay([{ en:"Let’s keep going. You could have said:" }, { he:m, tr:mt }], id); return; }
+      await tSay([{ en:"I couldn’t catch that in Hebrew. You could say:" }, { he:m, tr:mt }, { en:"Try it." }], id);
+      continue;
+    }
+    const res = evaluate(st.a.map(fill), r.alts); stat(res);
+    addBubble("me", heardHTML(res.heard, res.verdict));
+    if(res.verdict === "good"){ bumpStreak(); if(tries > 1) await tSay(praise(tries), id); return; }
+    if(tries >= 3){ await tSay([{ en:"You could have said:" }, { he:m, tr:mt }, { en:"Let’s keep going." }], id); return; }
+    setFb(`<div class="model"><div style="font-size:13px;color:var(--muted)">Try saying</div><div style="font-weight:600;color:var(--olive);font-size:18px">${esc(mt)}</div>${S.settings.showHebrew?`<div class="he" style="font-size:19px">${esc(m)}</div>`:""}<div style="font-size:13px;color:var(--muted)">${esc(fill(st.m[2]))}</div></div>`);
+    await tSay([{ en: tries === 1 ? "Hmm. Try answering like this:" : "Listen, then say it:" }, { he:m, tr:mt, slow: tries > 1 }, { en:"Your turn." }], id);
+  }
+}
+
+/* teacher view */
+function segsHTML(segs){
+  return segs.map(s => s.en ? esc(s.en)
+    : `<span class="hx"><b>${esc(fill(s.tr||""))}</b>${S.settings.showHebrew ? ` <span class="he">${esc(fill(s.he))}</span>` : ""}${s.gloss ? ` <i>(${esc(s.gloss)})</i>` : ""}</span>`).join(" ");
+}
+function heardHTML(h, verdict){
+  const mark = verdict === "good" ? '<span class="vk good">✓</span>' : verdict === "close" ? '<span class="vk close">~</span>' : verdict === "bad" ? '<span class="vk bad">✗</span>' : "";
+  return `${mark}<span class="he">${esc(h || "…")}</span>`;
+}
+function partnerHTML(name, p){
+  return `<div class="who">${esc(name)}</div><div class="tl">${esc(fill(p[1]))}</div>${S.settings.showHebrew?`<div class="hh he">${esc(fill(p[0]))}</div>`:""}<div class="ee">${esc(p[2])}</div>`;
+}
+function addBubble(kind, html){
+  if(!T) return;
+  T.log.push({ kind, html });
+  const f = $("#feed"); if(!f) return;
+  f.insertAdjacentHTML("beforeend", bubbleHTML({ kind, html }));
+  f.scrollTop = f.scrollHeight;
+}
+function bubbleHTML(b){
+  const cls = { teach:"msg teach", them:"msg them", me:"msg me" }[b.kind];
+  const who = b.kind === "teach" ? '<div class="who">Teacher</div>' : b.kind === "me" ? '<div class="who">You</div>' : "";
+  return `<div class="${cls}">${who}${b.html}</div>`;
+}
+function showCard(o){
+  let h = "";
+  if(o.mode === "repeat" || o.mode === "fix"){
+    h = `<div class="tlabel">${o.mode === "fix" ? "Let’s fix it — repeat after me" : "Repeat after me"}</div>
+      <div class="translit">${esc(fill(o.p.tr))}</div>${S.settings.showHebrew?`<div class="heline he">${esc(fill(o.p.he))}</div>`:""}<div class="meaning">${esc(fill(o.p.en))}</div>`;
+  } else if(o.mode === "recall"){
+    h = `<div class="tlabel">Say it in Hebrew</div><div class="big-en">${esc(fill(o.p.en))}</div>` +
+      (o.hidden ? `<div class="qmark">?</div>` : `<div class="translit">${esc(fill(o.p.tr))}</div>${S.settings.showHebrew?`<div class="heline he">${esc(fill(o.p.he))}</div>`:""}`);
+  } else if(o.mode === "reply"){
+    h = `<div class="tlabel">${esc(o.partner)} says — answer in Hebrew</div><div class="translit">${esc(fill(o.st.p[1]))}</div>${S.settings.showHebrew?`<div class="heline he">${esc(fill(o.st.p[0]))}</div>`:""}<div class="meaning">${esc(o.st.p[2])}</div>`;
+  }
+  T.cardHTML = h; const c = $("#tcardBody"); if(c) c.innerHTML = h;
+}
+function setFb(h){ if(!T) return; T.fbHTML = h; const f = $("#tfb"); if(f) f.innerHTML = h; }
+function setInterim(x){ const el = $("#tinterim"); if(el) el.textContent = x || ""; }
+function setStatus(s){
+  if(!T) return; T.status = s;
+  const el = $("#tstatus"); if(!el) return;
+  const map = {
+    speaking:['<span class="eq"><i></i><i></i><i></i></span>', "Teacher is speaking…"],
+    listening:['<span class="recdot"></span>', "Your turn — speak now"],
+    paused:["⏸", T.msg || "Paused"],
+    idle:["", T.done ? "Lesson complete" : (T.started ? "…" : "Ready when you are")]
+  };
+  const [ic, txt] = map[s] || map.idle;
+  el.className = "tstatus " + s; el.innerHTML = `${ic}<span>${esc(txt)}</span>`;
+}
+function renderTControls(){
+  const pb = $("#pauseBtn"); if(!pb || !T) return;
+  const running = T.started && !T.paused && !T.done;
+  pb.innerHTML = running ? `${ICON.pause}<span>Pause</span>` : `${ICON.play}<span>${T.done ? "Done" : "Resume"}</span>`;
+  pb.disabled = T.done;
+  ["#replayBtn","#skipBtn2"].forEach(s => { const b = $(s); if(b) b.disabled = !T.started || T.done; });
+}
+function renderTeacher(box){
+  const startPanel = !T.started ? `
+    <div class="tstart">
+      <div class="big-check" style="background:var(--blue-soft);color:var(--blue)">${ICON.mic}</div>
+      <h3>${T.kind === "review" ? "Spoken daily review" : `Lesson ${T.li+1} with your teacher`}</h3>
+      <p>Your teacher speaks, then listens for you automatically — no clicking needed. Find a quiet spot and talk at a normal volume. Say <b>od PA-am</b> (<span class="he">עוד פעם</span>) any time to hear it again.</p>
+      <div class="row" style="justify-content:center">
+        ${T.resumeAt ? `<button class="btn primary" id="tContinue">Continue where I left off</button><button class="btn ghost" id="tBegin">Start over</button>` : `<button class="btn primary" id="tBegin">Start the lesson</button>`}
+      </div>
+      <button class="btn ghost small" id="tMicTest" style="margin-top:12px">Test my microphone first</button>
+    </div>` : "";
+  box.innerHTML = `
+    <div class="card tstage">
+      ${startPanel}
+      <div class="tcard" ${T.started ? "" : 'style="display:none"'}>
+        <div id="tcardBody">${T.cardHTML}</div>
+        <div class="tinterim he" id="tinterim"></div>
+        <div id="tfb">${T.fbHTML}</div>
+      </div>
+      <div class="tstatus" id="tstatus"></div>
+      <div class="tctl" ${T.started ? "" : 'style="display:none"'}>
+        <button class="btn ghost" id="replayBtn" title="Say it again">${ICON.play}<span>Again</span></button>
+        <button class="btn primary" id="pauseBtn" title="Pause / resume (Space)"></button>
+        <button class="btn ghost" id="skipBtn2" title="Skip this step">Skip</button>
+      </div>
+      <div id="tdone" style="margin-bottom:14px"></div>
+      <div class="feed" id="feed">${T.log.map(bubbleHTML).join("")}</div>
+    </div>`;
+  const f = $("#feed"); f.scrollTop = f.scrollHeight;
+  const go1 = at => { unlockAudioAndMic(); T.i = at; T.started = true; T.log = []; renderTeacher(box); tResume(); };
+  const tb = $("#tBegin"); if(tb) tb.onclick = () => go1(0);
+  const tc = $("#tContinue"); if(tc) tc.onclick = () => go1(T.resumeAt);
+  const tm = $("#tMicTest"); if(tm) tm.onclick = micTest;
+  $("#pauseBtn").onclick = () => { if(T.done) return; if(T.paused){ unlockAudioAndMic(); tResume(); } else tPause("Paused. Press Resume to carry on."); };
+  $("#replayBtn").onclick = tRestartBeat;
+  $("#skipBtn2").onclick = tSkip;
+  setStatus(T.status); renderTControls();
+  if(T.done) showDone();
+}
+function showDone(){
+  const d = $("#tdone"); if(!d || !T) return;
+  if(T.kind === "review"){
+    d.innerHTML = `<div class="row" style="justify-content:center;margin-top:14px"><button class="btn primary" id="tHome">Back to levels</button></div>`;
+  } else {
+    const nx = T.li < LEVELS.length - 1;
+    d.innerHTML = `<div class="row" style="justify-content:center;margin-top:14px"><button class="btn ghost" id="tAgain">Do this lesson again</button>${nx ? `<button class="btn primary" id="tNext">Start Level ${T.li+2}</button>` : `<button class="btn primary" id="tHome">Back to levels</button>`}</div>`;
+    const a = $("#tAgain"); if(a) a.onclick = () => { teacherStart({ kind:"level", li:T.li }); T.resumeAt = 0; renderLesson(); };
+    const n = $("#tNext"); if(n) n.onclick = () => go({ name:"lesson", li:T.li+1, tab:"teach" });
+  }
+  const h = $("#tHome"); if(h) h.onclick = () => go({ name:"home" });
+}
+/* microphone test: checks the mic itself (volume meter) and Hebrew recognition separately */
+async function micTest(){
+  try{ synth && synth.cancel(); }catch(e){}
+  $("#modalRoot").innerHTML = `<div class="modal-bg" id="mtbg"><div class="card modal" role="dialog" aria-label="Microphone test">
+    <h2>Microphone test <button class="iconbtn" id="mtClose" aria-label="Close">✕</button></h2>
+    <p style="margin:0 0 10px">When the bar turns red, say <b style="color:var(--blue)">sha-LOM, ma nish-MA</b> <span class="he">(שלום, מה נשמע)</span>.</p>
+    <div class="field"><label class="l">1 · Can the browser hear your mic?</label><div class="bar" style="height:14px"><i id="mtLevel" style="width:0%;background:var(--good)"></i></div><div class="help" id="mtMicMsg">Asking for microphone access…</div></div>
+    <div class="field"><label class="l">2 · Can it understand Hebrew?</label><div class="help" id="mtSrMsg">Waiting…</div><div class="he" id="mtHeard" style="font-size:22px;min-height:30px"></div></div>
+    <div id="mtVerdict"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" id="mtAgain">Test again</button><button class="btn primary" id="mtDone">Done</button></div>
+  </div></div>`;
+  let stream = null, ctx = null, raf = 0, peak = 0, alive = true;
+  const cleanup = () => { alive = false; cancelAnimationFrame(raf); try{ stream && stream.getTracks().forEach(t => t.stop()); }catch(e){} try{ ctx && ctx.close(); }catch(e){} stopListening(); };
+  const close = () => { cleanup(); $("#modalRoot").innerHTML = ""; };
+  $("#mtClose").onclick = close; $("#mtDone").onclick = close;
+  $("#mtAgain").onclick = () => { cleanup(); micTest(); };
+  const micMsg = t => { const e = $("#mtMicMsg"); if(e) e.innerHTML = t; };
+  const srMsg = t => { const e = $("#mtSrMsg"); if(e) e.innerHTML = t; };
+  let micOk = null;
+  if(IN_FRAME){ micMsg("❌ This page is inside a preview window, which blocks the microphone. Download the file and open it directly in Edge or Chrome."); micOk = false; }
+  else if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ micMsg("⚠️ This browser won’t give the page microphone access here. Open it in Edge or Chrome."); micOk = false; }
+  else {
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      if(!alive) return cleanup();
+      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(stream).connect(an);
+      const buf = new Uint8Array(an.fftSize);
+      const loop = () => { an.getByteTimeDomainData(buf); let m = 0; for(const x of buf) m = Math.max(m, Math.abs(x - 128)); const lvl = Math.min(100, m * 1.6); peak = Math.max(peak, lvl); const el = $("#mtLevel"); if(el) el.style.width = lvl + "%"; raf = requestAnimationFrame(loop); };
+      loop(); micOk = true;
+      const label = (stream.getAudioTracks()[0] || {}).label || "your microphone";
+      micMsg(`✅ Microphone access allowed (${esc(label)}). Speak — the bar should move.`);
+    }catch(e){
+      micOk = false;
+      micMsg(e.name === "NotAllowedError" ? (location.protocol === "file:" ? "❌ Microphone blocked. Click the mic/lock icon in the address bar → Allow, then press Test again. If the browser won’t let you allow it for a file on your computer, the app needs to be opened from a web link." : "❌ Microphone blocked. Click the mic/lock icon in the address bar → Allow, then press Test again.")
+        : e.name === "NotFoundError" ? "❌ No microphone found. Plug one in or check your system sound settings." : "❌ Couldn’t open the microphone (" + esc(e.name) + ").");
+    }
+  }
+  if(!SR){ srMsg("❌ This browser can’t do speech recognition. Use Microsoft Edge or Google Chrome."); }
+  else {
+    await sleep(300); if(!alive) return;
+    srMsg('<span class="recdot" style="display:inline-block;vertical-align:middle;margin-right:6px"></span> Listening — say it now…');
+    const r = await listen(t => { const h = $("#mtHeard"); if(h) h.textContent = t; });
+    if(!alive) return;
+    const heard = r.alts[0] || "";
+    if(heard){ $("#mtHeard").textContent = heard; srMsg(hasHebrew(heard) ? "✅ Hebrew recognized. You’re all set." : "⚠️ It heard you, but not in Hebrew. Try again, a little slower."); }
+    else srMsg("❌ " + esc(errorText(r.error || "no-speech")));
+    const v = $("#mtVerdict");
+    if(v && micOk && peak < 4) v.innerHTML = '<div class="banner warn">The microphone is connected but the bar barely moved — it may be muted or the wrong input is selected. Check your system sound settings (Input device).</div>';
+  }
+}
+/* iPhone/Safari only allows speech and the mic to start from a tap.
+   Called directly inside the Start button's click: plays a silent utterance
+   and asks for microphone permission once, so the hands-free lesson can run. */
+let audioUnlocked = false;
+function unlockAudioAndMic(){
+  if(audioUnlocked) return; audioUnlocked = true;
+  try{ if(synth){ const u = new SpeechSynthesisUtterance(" "); u.volume = 0; synth.speak(u); } }catch(e){}
+  try{
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !IN_FRAME){
+      navigator.mediaDevices.getUserMedia({ audio:true }).then(s => setTimeout(() => s.getTracks().forEach(t => t.stop()), 300)).catch(() => {});
+    }
+  }catch(e){}
+}
+function killTeacher(){ if(T){ T.id++; T = null; } try{ synth && synth.cancel(); }catch(e){} stopListening(); }
+function renderReviewTeacher(){
+  app.innerHTML = `<div class="lesson-head"><button class="iconbtn" id="backBtn" aria-label="Back">${ICON.back}</button><div><h2>Daily review</h2><div class="he">חזרה יומית</div></div></div><div id="stageWrap"></div>`;
+  $("#backBtn").onclick = () => go({ name:"home" });
+  if(!T || T.kind !== "review") teacherStart({ kind:"review" });
+  renderTeacher($("#stageWrap"));
+}
+
+/* ---------------- KEYBOARD ---------------- */
+document.addEventListener("keydown", e => {
+  if($("#modalRoot").innerHTML || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  const k = e.key.toLowerCase();
+  if(e.code === "Space" && $("#pauseBtn") && !$("#pauseBtn").disabled && T && T.started){ e.preventDefault(); $("#pauseBtn").click(); return; }
+  if(e.code === "Space"){ const m = $("#micBtn"); if(m){ e.preventDefault(); m.click(); } }
+  else if(k === "p"){ const b = $("#playBtn") || $("#againBtn"); if(b && !b.disabled) b.click(); }
+  else if(k === "s"){ const b = $("#slowBtn"); if(b && !b.disabled) b.click(); }
+  else if(k === "enter"){ const b = $("#nextBtn"); if(b && !b.disabled){ e.preventDefault(); b.click(); } }
+});
+
+/* ---------------- SETTINGS ---------------- */
+$("#settingsBtn").onclick = openSettings;
+function openSettings(){
+  const st = S.settings;
+  const vopts = (sel) => heVoices.length ? heVoices.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI===sel?"selected":""}>${esc(v.name)}</option>`).join("") : `<option>No Hebrew voice found</option>`;
+  const acc = S.history.attempts ? Math.round(S.history.correct / S.history.attempts * 100) : 0;
+  $("#modalRoot").innerHTML = `<div class="modal-bg" id="mbg"><div class="card modal" role="dialog" aria-label="Settings">
+    <h2>Settings <button class="iconbtn" id="closeSet" aria-label="Close">✕</button></h2>
+    <div class="field"><label class="l">I speak as</label>
+      <div class="seg"><button data-g="m" class="${st.gender==="m"?"on":""}">A man (אני מדבר)</button><button data-g="f" class="${st.gender==="f"?"on":""}">A woman (אני מדברת)</button></div>
+      <div class="help">Hebrew verbs and adjectives change with gender, so your phrases will match how you speak.</div></div>
+    <div class="field"><label class="l" for="nameIn">Your name</label><input type="text" id="nameIn" value="${esc(st.name)}"><div class="help">Used in “kor-IM li …” (my name is …). Type it in Hebrew letters if you want the voice to say it better.</div></div>
+    <div class="field toggle"><div><label class="l" style="margin:0">Show Hebrew script</label><div class="help">Turn off to train purely by ear and transliteration.</div></div><button class="sw ${st.showHebrew?"on":""}" id="heSw" aria-label="Show Hebrew script"></button></div>
+    <div class="field"><label class="l" for="rateIn">Voice speed: <span id="rateVal">${st.rate.toFixed(2)}</span></label><input type="range" id="rateIn" min="0.5" max="1.2" step="0.05" value="${st.rate}" style="width:100%"></div>
+    <div class="field"><label class="l" for="voiceSel">Teacher voice</label><select id="voiceSel">${vopts(st.voiceURI || (heVoices[0]&&heVoices[0].voiceURI))}</select></div>
+    <div class="field"><label class="l" for="pvoiceSel">Conversation partner voice</label><select id="pvoiceSel"><option value="">Auto — match the character</option>${heVoices.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI===st.partnerVoiceURI?"selected":""}>${esc(v.name)}</option>`).join("")}</select></div>
+    <div class="field"><label class="l" for="enVoiceSel">Teacher’s English voice</label><select id="enVoiceSel">${enVoices.length ? enVoices.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI===(st.enVoiceURI || enVoices[0].voiceURI)?"selected":""}>${esc(v.name)}</option>`).join("") : "<option>No English voice found</option>"}</select><div class="row" style="margin-top:8px"><button class="btn ghost small" id="testVoice">Test voices</button><button class="btn ghost small" id="testMic">Test microphone</button></div></div>
+    <div class="field toggle"><div><label class="l" style="margin:0">Unlock all levels</label><div class="help">Jump ahead if you already know the basics.</div></div><button class="sw ${st.unlockAll?"on":""}" id="unSw" aria-label="Unlock all levels"></button></div>
+    <hr class="sep">
+    <div class="help" style="margin-bottom:10px">Accuracy so far: <b>${acc}%</b> over ${S.history.attempts} spoken attempts.</div>
+    <div class="field"><label class="l">Back up or move your progress</label>
+      <div class="row"><button class="btn ghost small" id="copyProg">Copy progress code</button><button class="btn ghost small" id="restoreProg">Restore from code</button></div>
+      <textarea id="progTxt" placeholder="Paste a progress code here, then press Restore" style="margin-top:8px"></textarea>
+      <div class="help">Progress is saved in this browser. Copy the code to keep a backup or move to another computer.</div></div>
+    <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn ghost small" id="resetProg" style="color:var(--bad)">Reset all progress</button><button class="btn primary" id="doneSet">Done</button></div>
+  </div></div>`;
+  const close = () => { $("#modalRoot").innerHTML = ""; render(); };
+  $("#closeSet").onclick = close; $("#doneSet").onclick = close;
+  $("#mbg").onclick = e => { if(e.target.id === "mbg") close(); };
+  document.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { st.gender = b.dataset.g; save(); document.querySelectorAll("[data-g]").forEach(x => x.classList.toggle("on", x === b)); });
+  $("#nameIn").oninput = e => { st.name = e.target.value; save(); };
+  $("#heSw").onclick = e => { st.showHebrew = !st.showHebrew; e.currentTarget.classList.toggle("on", st.showHebrew); save(); };
+  $("#unSw").onclick = e => { st.unlockAll = !st.unlockAll; e.currentTarget.classList.toggle("on", st.unlockAll); save(); };
+  $("#rateIn").oninput = e => { st.rate = +e.target.value; $("#rateVal").textContent = st.rate.toFixed(2); save(); };
+  $("#voiceSel").onchange = e => { st.voiceURI = e.target.value; save(); };
+  $("#pvoiceSel").onchange = e => { st.partnerVoiceURI = e.target.value; save(); };
+  $("#enVoiceSel").onchange = e => { st.enVoiceURI = e.target.value; save(); };
+  $("#testMic").onclick = () => { micTest(); };
+  $("#testVoice").onclick = async () => { await speak("Hi! I’m your teacher.", { lang:"en" }); await speak("שלום, מה נשמע?"); await speak("הכל טוב, תודה!", { partner:true }); };
+  $("#copyProg").onclick = async () => {
+    const code = btoa(unescape(encodeURIComponent(JSON.stringify(S))));
+    $("#progTxt").value = code;
+    try{ await navigator.clipboard.writeText(code); toast("Progress code copied"); }catch(e){ $("#progTxt").select(); toast("Select the code and copy it"); }
+  };
+  $("#restoreProg").onclick = () => {
+    try{ const d = JSON.parse(decodeURIComponent(escape(atob($("#progTxt").value.trim())))); if(!d.settings || !d.phrases) throw 0; S = Object.assign(defaultState(), d); save(); toast("Progress restored"); close(); }
+    catch(e){ toast("That code didn’t work — check it was copied completely"); }
+  };
+  let armed = false;
+  $("#resetProg").onclick = e => {
+    if(!armed){ armed = true; e.currentTarget.textContent = "Click again to erase everything"; return; }
+    const keep = S.settings; S = defaultState(); S.settings = keep; save(); toast("Progress reset"); close(); go({ name:"home" });
+  };
+}
+
+/* expose for tests */
+window.__daber = { LEVELS, evaluate, scoreAgainst, norm, tokens };
+render();
+</script>
+</body>
+</html>
