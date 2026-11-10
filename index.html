@@ -670,6 +670,7 @@ function renderStreak(){ $("#streakChip").textContent = (S.streak.count||0) + "-
 const IN_FRAME = (() => { try{ return window.self !== window.top; }catch(e){ return true; } })();
 function renderBanners(){
   const b = [];
+  if(/iPhone|iPad|iPod/i.test(navigator.userAgent)) b.push('<div class="banner info"><b>On iPhone:</b> turn <b>Silent mode off</b> (the switch or Action button on the side), or the teacher’s voice won’t play. Turn the volume up too.</div>');
   if(IN_FRAME) b.push('<div class="banner warn"><b>You’re viewing this inside a preview window, which blocks the microphone.</b> Download the file and open it directly in Microsoft Edge or Google Chrome.</div>');
   if(!SR) b.push('<div class="banner warn"><b>This browser can’t listen to you.</b> Open this file in <b>Microsoft Edge</b> or <b>Google Chrome</b> (desktop or Android) for spoken feedback. Until then you can still listen and mark yourself.</div>');
   const natural = v => v && /natural|online|neural|premium|enhanced/i.test(v.name);
@@ -1375,6 +1376,14 @@ function unlockAudioAndMic(){
     }
   }catch(e){}
 }
+/* iPhone: unlock speech on the very first tap anywhere, so every Play button works. */
+let speechUnlocked = false;
+function unlockSpeechOnce(){
+  if(speechUnlocked || !synth) return; speechUnlocked = true;
+  try{ const u = new SpeechSynthesisUtterance(" "); u.volume = 0; synth.speak(u); }catch(e){}
+}
+document.addEventListener("touchend", unlockSpeechOnce, { capture:true });
+document.addEventListener("click", unlockSpeechOnce, { capture:true });
 function killTeacher(){ if(T){ T.id++; T = null; } try{ synth && synth.cancel(); }catch(e){} stopListening(); }
 function renderReviewTeacher(){
   app.innerHTML = `<div class="lesson-head"><button class="iconbtn" id="backBtn" aria-label="Back">${ICON.back}</button><div><h2>Daily review</h2><div class="he">חזרה יומית</div></div></div><div id="stageWrap"></div>`;
