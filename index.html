@@ -748,12 +748,13 @@ document.addEventListener("click", e => {
    ROUTER
    ========================================================= */
 let view = { name:"home" };
-function go(v){ killTeacher(); view = v; render(); window.scrollTo(0,0); }
+function go(v){ killTeacher(); if(view.name === "live" && v.name !== "live") liveStop(); view = v; render(); window.scrollTo(0,0); }
 function render(){
   renderStreak(); renderBanners();
   if(view.name === "home") renderHome();
   else if(view.name === "lesson") renderLesson();
   else if(view.name === "review") renderReviewTeacher();
+  else if(view.name === "live") renderLive();
 }
 
 /* ---------------- HOME ---------------- */
@@ -780,12 +781,17 @@ function renderHome(){
   app.innerHTML = `
     <section class="hero"><h1>Speak Hebrew with a teacher who talks back.</h1>
     <p>Each lesson is spoken: your teacher says a phrase, listens to you repeat it, corrects you out loud, quizzes you, then has a real conversation with you. Finish the lesson to unlock the next level.</p></section>
+    <div class="card review" style="background:var(--olive-soft);border-color:#d9dfc0">
+      <div><h3>Live conversation · free</h3><p>Talk back and forth with your teacher in real time, like a phone call. Practise Hebrew or ask anything.</p></div>
+      <button class="btn primary" id="liveBtn" style="background:var(--olive)">Talk now</button>
+    </div>
     ${reviewCard}
     <div class="levels">${cards}</div>`;
   app.querySelectorAll("[data-level]").forEach(b => b.onclick = () => {
     go({ name:"lesson", li:+b.dataset.level, tab:"teach" });
   });
   const rb = $("#reviewBtn"); if(rb) rb.onclick = () => go({ name:"review" });
+  $("#liveBtn").onclick = () => go({ name:"live" });
 }
 
 /* ---------------- LESSON SHELL ---------------- */
@@ -1567,6 +1573,224 @@ async function practiceAnswer(pr){
 }
 $("#askFab").onclick = openAsk;
 
+/* =========================================================
+   LIVE CONVERSATION — real-time voice chat (Gemini Live API, free tier).
+   Mic audio streams to Gemini; Gemini answers with natural speech.
+   Needs the learner's free Google AI Studio key, stored only in this browser.
+   ========================================================= */
+const GKEY_STORE = "daber-gemini-key";
+const LIVE_MODELS = ["gemini-3.1-flash-live-preview", "gemini-2.5-flash-native-audio-preview-12-2025"];
+const LIVE_VOICE = "Aoede";
+function getGKey(){ try{ return localStorage.getItem(GKEY_STORE) || ""; }catch(e){ return ""; } }
+function setGKey(k){ try{ if(k) localStorage.setItem(GKEY_STORE, k); else localStorage.removeItem(GKEY_STORE); }catch(e){} }
+const LV = { ws:null, state:"idle", mode:"hebrew", log:[], cur:null, err:"", micCtx:null, outCtx:null, stream:null, node:null, src:null, nextT:0, playing:[], muted:false, level:0, modelIdx:0, variant:0, gotSetup:false, lastTeacherAt:0 };
+
+function liveSystem(){
+  const g = female() ? "a woman — when you model first-person Hebrew, use feminine forms (אני מדברת, אני רוצה with ro-TSA)" : "a man — when you model first-person Hebrew, use masculine forms (אני מדבר, אני רוצה with ro-TSE)";
+  const done = LEVELS.filter((_,i) => levelDone(i)).map(l => l.title);
+  const next = LEVELS.find((_,i) => !levelDone(i));
+  const lvl = done.length ? `They have finished these lessons: ${done.join(", ")}.` : "They are a complete beginner.";
+  const common = `You are Daber, a warm, patient, upbeat Hebrew teacher having a live voice conversation. The learner's name is ${nameStr()}; they are ${g}. They recently moved to Israel and want to SPEAK everyday Israeli Hebrew — not read or write it. ${lvl}${next ? ` Their next lesson is "${next.title}".` : ""}
+Voice style: short turns (one to three sentences), then hand the turn back. Speak Hebrew slowly and clearly, with modern Israeli pronunciation. Never read out transliteration or spelling unless asked. Be encouraging and natural, like a friendly tutor on a call, not a textbook.`;
+  if(LV.mode === "english") return common + `
+Mode: questions in English. The learner asks you things in English (how to say something, what a word means, grammar, culture, slang). Answer in English, say the Hebrew phrase slowly, then invite them to repeat it. Listen to their attempt and gently correct pronunciation or grammar, then praise and continue.`;
+  return common + `
+Mode: Hebrew conversation practice. Lead a real conversation at the learner's level, mostly in Hebrew, using simple words. Pick an everyday situation (meeting someone, a café, the shuk, directions, making plans) and role-play it. If they struggle, say the phrase in English, then again slowly in Hebrew, and ask them to try. When they make a mistake, briefly model the correct Hebrew and let them repeat. If they speak English, answer the question and steer back to Hebrew. Start by greeting them in Hebrew and asking a simple question.`;
+}
+
+function b64FromInt16(i16){
+  const u8 = new Uint8Array(i16.buffer); let s = "";
+  for(let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function int16FromB64(b64){
+  const bin = atob(b64), n = bin.length, u8 = new Uint8Array(n);
+  for(let i = 0; i < n; i++) u8[i] = bin.charCodeAt(i);
+  return new Int16Array(u8.buffer, 0, n >> 1);
+}
+function playPCM(b64){
+  const ctx = LV.outCtx; if(!ctx) return;
+  const i16 = int16FromB64(b64); if(!i16.length) return;
+  const buf = ctx.createBuffer(1, i16.length, 24000), ch = buf.getChannelData(0);
+  for(let i = 0; i < i16.length; i++) ch[i] = i16[i] / 32768;
+  const s = ctx.createBufferSource(); s.buffer = buf; s.connect(ctx.destination);
+  const t = Math.max(ctx.currentTime + 0.03, LV.nextT);
+  s.start(t); LV.nextT = t + buf.duration;
+  LV.playing.push(s); s.onended = () => { LV.playing = LV.playing.filter(x => x !== s); if(!LV.playing.length && LV.state === "speaking") liveSet("listening"); };
+  if(LV.state !== "speaking") liveSet("speaking");
+}
+function stopPlayback(){ LV.playing.forEach(s => { try{ s.stop(); }catch(e){} }); LV.playing = []; if(LV.outCtx) LV.nextT = LV.outCtx.currentTime; }
+
+const WORKLET = `class Cap extends AudioWorkletProcessor{process(i){const c=i[0]&&i[0][0];if(c)this.port.postMessage(c.slice(0));return true}}registerProcessor('daber-cap',Cap);`;
+async function startMic(){
+  LV.stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, autoGainControl:true, channelCount:1 } });
+  const ctx = LV.micCtx; if(ctx.state === "suspended") await ctx.resume();
+  LV.src = ctx.createMediaStreamSource(LV.stream);
+  const rate = ctx.sampleRate, chunk = Math.round(rate * 0.1);
+  let acc = new Float32Array(0);
+  const onData = f32 => {
+    if(LV.muted || !LV.ws || LV.ws.readyState !== 1 || !LV.gotSetup) return;
+    let m = 0; for(let i = 0; i < f32.length; i += 8) m = Math.max(m, Math.abs(f32[i])); LV.level = Math.min(1, m * 3); meter();
+    const a = new Float32Array(acc.length + f32.length); a.set(acc); a.set(f32, acc.length); acc = a;
+    while(acc.length >= chunk){
+      const part = acc.subarray(0, chunk); acc = acc.slice(chunk);
+      const i16 = new Int16Array(part.length);
+      for(let i = 0; i < part.length; i++){ const v = Math.max(-1, Math.min(1, part[i])); i16[i] = v < 0 ? v * 0x8000 : v * 0x7fff; }
+      LV.ws.send(JSON.stringify({ realtimeInput:{ audio:{ data:b64FromInt16(i16), mimeType:"audio/pcm;rate=" + rate } } }));
+    }
+  };
+  let ok = false;
+  if(ctx.audioWorklet){
+    for(const url of [URL.createObjectURL(new Blob([WORKLET], { type:"application/javascript" })), "data:application/javascript;base64," + btoa(WORKLET)]){
+      try{ await ctx.audioWorklet.addModule(url); ok = true; break; }catch(e){ dbg("live: worklet load failed, trying fallback"); }
+    }
+  }
+  if(ok){
+    LV.node = new AudioWorkletNode(ctx, "daber-cap");
+    LV.node.port.onmessage = e => onData(e.data);
+  } else {
+    LV.node = ctx.createScriptProcessor(2048, 1, 1);
+    LV.node.onaudioprocess = e => onData(e.inputBuffer.getChannelData(0).slice(0));
+  }
+  const mute = ctx.createGain(); mute.gain.value = 0;
+  LV.src.connect(LV.node); LV.node.connect(mute); mute.connect(ctx.destination);
+}
+function meter(){ const el = $("#lvMeter"); if(el) el.style.width = Math.round((LV.state === "listening" ? LV.level : 0) * 100) + "%"; }
+
+function liveSet(st, err){
+  LV.state = st; if(err !== undefined) LV.err = err;
+  const s = $("#lvStatus"); if(!s) return;
+  const map = {
+    idle:["", "Tap Start and just talk — like a phone call with your teacher."],
+    connecting:['<span class="eq"><i></i><i></i><i></i></span>', "Connecting…"],
+    listening:['<span class="recdot"></span>', LV.muted ? "Mic muted — tap Unmute to talk" : "Listening — just talk"],
+    speaking:['<span class="eq"><i></i><i></i><i></i></span>', "Teacher is speaking — you can interrupt any time"],
+    error:["⚠️", LV.err || "Something went wrong."]
+  };
+  const [ic, tx] = map[st] || map.idle;
+  s.className = "tstatus " + (st === "listening" ? "listening" : st === "speaking" || st === "connecting" ? "speaking" : st === "error" ? "paused" : "");
+  s.innerHTML = `${ic}<span>${esc(tx)}</span>`;
+  const b = $("#lvStart"); if(b){ const on = st === "listening" || st === "speaking" || st === "connecting"; b.textContent = on ? "End conversation" : "Start conversation"; b.className = "btn " + (on ? "ghost" : "primary"); }
+  const m = $("#lvMute"); if(m){ m.style.display = (st === "listening" || st === "speaking") ? "" : "none"; m.textContent = LV.muted ? "Unmute" : "Mute mic"; }
+  meter();
+}
+function liveAdd(who, text){
+  if(!text) return;
+  if(LV.cur && LV.cur.who === who){ LV.cur.text += text; }
+  else { LV.cur = { who, text }; LV.log.push(LV.cur); }
+  const f = $("#lvFeed"); if(!f) return;
+  f.innerHTML = LV.log.map(m => `<div class="msg ${m.who === "me" ? "me" : "teach"}" style="${m.who==="me"?"text-align:left":""}"><div class="who">${m.who === "me" ? "You" : "Teacher"}</div><span ${/[֐-׿]/.test(m.text) ? 'dir="auto"' : ""}>${esc(m.text.trim())}</span></div>`).join("");
+  f.scrollTop = f.scrollHeight;
+}
+
+function liveConnect(){
+  const key = getGKey(), model = LIVE_MODELS[LV.modelIdx];
+  LV.gotSetup = false; LV.cur = null;
+  const ws = new WebSocket("wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=" + encodeURIComponent(key));
+  LV.ws = ws;
+  ws.onopen = () => {
+    const speech = { voiceConfig:{ prebuiltVoiceConfig:{ voiceName:LIVE_VOICE } } };
+    const base = { model:"models/" + model, systemInstruction:{ parts:[{ text:liveSystem() }] }, inputAudioTranscription:{}, outputAudioTranscription:{} };
+    const setup = LV.variant === 0
+      ? Object.assign(base, { generationConfig:{ responseModalities:["AUDIO"], speechConfig:speech } })
+      : Object.assign(base, { responseModalities:["AUDIO"], speechConfig:speech });
+    ws.send(JSON.stringify({ setup }));
+    dbg("live: connected, setup sent (" + model + ", variant " + LV.variant + ")");
+  };
+  ws.onmessage = async ev => {
+    let msg; try{ msg = JSON.parse(typeof ev.data === "string" ? ev.data : await ev.data.text()); }catch(e){ return; }
+    if(msg.setupComplete){
+      LV.gotSetup = true; liveSet("listening"); dbg("live: ready");
+      ws.send(JSON.stringify({ realtimeInput:{ text: LV.mode === "english" ? "(The learner just joined. Greet them warmly in one short sentence and ask what they'd like to learn.)" : "(The learner just joined. Greet them in simple Hebrew and ask an easy question.)" } }));
+      return;
+    }
+    const sc = msg.serverContent;
+    if(sc){
+      if(sc.interrupted){ stopPlayback(); LV.cur = null; liveSet("listening"); }
+      if(sc.inputTranscription && sc.inputTranscription.text) liveAdd("me", sc.inputTranscription.text);
+      if(sc.outputTranscription && sc.outputTranscription.text) liveAdd("t", sc.outputTranscription.text);
+      if(sc.modelTurn && sc.modelTurn.parts) sc.modelTurn.parts.forEach(p => { if(p.inlineData && p.inlineData.data) playPCM(p.inlineData.data); });
+      if(sc.turnComplete){ LV.cur = null; bumpStreak(); }
+    }
+    if(msg.goAway) dbg("live: server will close soon");
+  };
+  ws.onerror = () => dbg("live: socket error");
+  ws.onclose = ev => {
+    dbg("live: closed " + ev.code + " " + (ev.reason || ""));
+    if(LV.ws !== ws) return;
+    const reason = ev.reason || "";
+    if(!LV.gotSetup && LV.state === "connecting"){
+      if(/unknown name|invalid json|cannot find field/i.test(reason) && LV.variant === 0){ LV.variant = 1; return liveConnect(); }
+      if(/not found|not supported|is not available/i.test(reason) && LV.modelIdx < LIVE_MODELS.length - 1){ LV.modelIdx++; return liveConnect(); }
+    }
+    let err = "";
+    if(/api key|API_KEY|permission|unauth/i.test(reason) || ev.code === 1008 && /key/i.test(reason)) err = "Google didn’t accept that API key. Check it in Settings, or create a new one at aistudio.google.com/apikey.";
+    else if(/quota|exhaust|rate/i.test(reason)) err = "You’ve hit today’s free limit. Try again later — the free quota resets daily.";
+    else if(LV.state !== "idle") err = LV.gotSetup ? "The conversation ended (free sessions last about 10–15 minutes). Tap Start to continue." : ("Couldn’t start the conversation" + (reason ? ": " + reason : ".") );
+    liveTeardown();
+    liveSet(err ? "error" : "idle", err);
+  };
+}
+async function liveStart(){
+  if(LV.state !== "idle" && LV.state !== "error") return liveStop();
+  killTeacher();
+  // create audio contexts inside the tap (required on iPhone)
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    LV.outCtx = new AC(); LV.outCtx.resume();
+    try{ LV.micCtx = new AC({ sampleRate:16000 }); }catch(e){ LV.micCtx = new AC(); }
+    LV.micCtx.resume(); LV.nextT = 0;
+  }catch(e){ return liveSet("error", "This browser can’t play live audio."); }
+  liveSet("connecting", "");
+  try{ await startMic(); }
+  catch(e){ dbg("live: mic failed " + (e && (e.name + " " + e.message))); const denied = e && /NotAllowed|Permission|Security/i.test(e.name); liveTeardown(); if(!denied && !IN_FRAME) return liveSet("error", "Couldn’t start the microphone (" + (e && e.message || e) + ")."); return liveSet("error", IN_FRAME ? "The microphone is blocked inside this preview window. Open the site in Safari or Chrome." : "Microphone access was blocked. Allow the microphone for this site (the icon in the address bar) and try again."); }
+  LV.modelIdx = 0; LV.variant = 0;
+  liveConnect();
+}
+function liveTeardown(){
+  stopPlayback();
+  try{ LV.node && LV.node.disconnect(); }catch(e){} try{ LV.src && LV.src.disconnect(); }catch(e){}
+  try{ LV.stream && LV.stream.getTracks().forEach(t => t.stop()); }catch(e){}
+  try{ LV.micCtx && LV.micCtx.close(); }catch(e){} try{ LV.outCtx && LV.outCtx.close(); }catch(e){}
+  LV.node = LV.src = LV.stream = LV.micCtx = LV.outCtx = null; LV.level = 0;
+}
+function liveStop(){ const ws = LV.ws; LV.ws = null; try{ ws && ws.close(); }catch(e){} liveTeardown(); liveSet("idle", ""); }
+
+function renderLive(){
+  const key = getGKey();
+  app.innerHTML = `
+    <div class="lesson-head"><button class="iconbtn" id="backBtn" aria-label="Back">${ICON.back}</button>
+      <div><h2>Live conversation</h2><div class="he">שיחה חיה</div></div></div>
+    <div class="card tstage">
+      ${!key ? `
+      <div class="tstart" style="text-align:left">
+        <h3 style="text-align:center">Talk freely with your teacher</h3>
+        <p style="text-align:center">A real back-and-forth voice conversation, like ChatGPT voice. It runs on Google’s free Gemini Live service, so you need a free Google API key (one time, about a minute):</p>
+        <ol style="margin:0 0 14px 18px;padding:0;line-height:1.7">
+          <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"><b>aistudio.google.com/apikey</b></a> and sign in with your Google account.</li>
+          <li>Click <b>Create API key</b> and copy it.</li>
+          <li>Paste it below and tap <b>Save</b>.</li>
+        </ol>
+        <div class="ask-row"><input type="text" id="gkIn" placeholder="AIza…" autocomplete="off"><button class="btn primary" id="gkSave">Save</button></div>
+        <div class="help" style="font-size:13px;color:var(--muted);margin-top:8px">The key is saved only in this browser on this device. Google’s free tier has daily limits and Google may use free-tier conversations to improve its products.</div>
+      </div>` : `
+      <div class="seg" style="max-width:420px;margin:0 auto 14px"><button data-lm="hebrew" class="${LV.mode==="hebrew"?"on":""}">Practise speaking Hebrew</button><button data-lm="english" class="${LV.mode==="english"?"on":""}">Ask questions in English</button></div>
+      <div class="tstatus" id="lvStatus"></div>
+      <div class="bar" style="max-width:260px;margin:8px auto 0;height:6px"><i id="lvMeter" style="width:0%;background:var(--bad)"></i></div>
+      <div class="tctl"><button class="btn primary" id="lvStart">Start conversation</button><button class="btn ghost" id="lvMute" style="display:none">Mute mic</button></div>
+      <p style="text-align:center;color:var(--muted);font-size:13px;margin:0 0 12px">Talk naturally and interrupt whenever you like. Headphones work best, so the teacher doesn’t hear herself.</p>
+      <div class="feed" id="lvFeed"></div>`}
+    </div>`;
+  $("#backBtn").onclick = () => go({ name:"home" });
+  const gs = $("#gkSave"); if(gs) gs.onclick = () => { const k = $("#gkIn").value.trim(); if(k.length < 20){ toast("That doesn’t look like a Google API key"); return; } setGKey(k); renderLive(); };
+  if(!key) return;
+  document.querySelectorAll("[data-lm]").forEach(b => b.onclick = () => { if(LV.mode === b.dataset.lm) return; LV.mode = b.dataset.lm; const was = LV.state === "listening" || LV.state === "speaking"; if(was) liveStop(); renderLive(); if(was) toast("Mode changed — tap Start to begin again"); });
+  $("#lvStart").onclick = liveStart;
+  $("#lvMute").onclick = () => { LV.muted = !LV.muted; liveSet(LV.state); };
+  liveAdd("", ""); const f = $("#lvFeed"); if(f){ f.innerHTML = LV.log.map(m => `<div class="msg ${m.who === "me" ? "me" : "teach"}" style="${m.who==="me"?"text-align:left":""}"><div class="who">${m.who === "me" ? "You" : "Teacher"}</div><span dir="auto">${esc(m.text.trim())}</span></div>`).join(""); f.scrollTop = f.scrollHeight; }
+  liveSet(LV.state);
+}
+
 function killTeacher(){ if(T){ T.id++; T = null; } try{ synth && synth.cancel(); }catch(e){} stopListening(); }
 function renderReviewTeacher(){
   app.innerHTML = `<div class="lesson-head"><button class="iconbtn" id="backBtn" aria-label="Back">${ICON.back}</button><div><h2>Daily review</h2><div class="he">חזרה יומית</div></div></div><div id="stageWrap"></div>`;
@@ -1603,6 +1827,7 @@ function openSettings(){
     <div class="field"><label class="l" for="voiceSel">Teacher voice</label><select id="voiceSel">${vopts(st.voiceURI || (heVoices[0]&&heVoices[0].voiceURI))}</select></div>
     <div class="field"><label class="l" for="pvoiceSel">Conversation partner voice</label><select id="pvoiceSel"><option value="">Auto — match the character</option>${heVoices.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI===st.partnerVoiceURI?"selected":""}>${esc(v.name)}</option>`).join("")}</select></div>
     <div class="field"><label class="l" for="enVoiceSel">Teacher’s English voice</label><select id="enVoiceSel">${enVoices.length ? enVoices.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI===(st.enVoiceURI || enVoices[0].voiceURI)?"selected":""}>${esc(v.name)}</option>`).join("") : "<option>No English voice found</option>"}</select><div class="row" style="margin-top:8px"><button class="btn ghost small" id="testVoice">Test voices</button><button class="btn ghost small" id="testMic">Test microphone</button></div></div>
+    <div class="field"><label class="l" for="gkSet">Google Gemini API key (for Live conversation, free)</label><input type="text" id="gkSet" placeholder="AIza…" value="${getGKey() ? "••••••••" + esc(getGKey().slice(-4)) : ""}" autocomplete="off"><div class="help">Get one free at aistudio.google.com/apikey. Saved only in this browser. Clear the box to remove it.</div></div>
     <div class="field"><label class="l" for="keySet">Anthropic API key (for “Ask”)</label><input type="text" id="keySet" placeholder="sk-ant-…" value="${getKey() ? "••••••••" + esc(getKey().slice(-4)) : ""}" autocomplete="off"><div class="help">Saved only in this browser. Paste a new key to replace it, or clear the box to remove it.</div></div>
     <div class="field toggle"><div><label class="l" style="margin:0">Unlock all levels</label><div class="help">Jump ahead if you already know the basics.</div></div><button class="sw ${st.unlockAll?"on":""}" id="unSw" aria-label="Unlock all levels"></button></div>
     <hr class="sep">
@@ -1619,6 +1844,7 @@ function openSettings(){
   document.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { st.gender = b.dataset.g; save(); document.querySelectorAll("[data-g]").forEach(x => x.classList.toggle("on", x === b)); });
   $("#nameIn").oninput = e => { st.name = e.target.value; save(); };
   $("#heSw").onclick = e => { st.showHebrew = !st.showHebrew; e.currentTarget.classList.toggle("on", st.showHebrew); save(); };
+  $("#gkSet").onchange = e => { const v = e.target.value.trim(); if(!v){ setGKey(""); toast("Google key removed"); } else if(!v.startsWith("••") && v.length >= 20){ setGKey(v); toast("Google key saved"); } };
   $("#keySet").onchange = e => { const v = e.target.value.trim(); if(!v){ setKey(""); toast("API key removed"); } else if(/^sk-ant-/.test(v)){ setKey(v); toast("API key saved"); } };
   $("#unSw").onclick = e => { st.unlockAll = !st.unlockAll; e.currentTarget.classList.toggle("on", st.unlockAll); save(); };
   $("#rateIn").oninput = e => { st.rate = +e.target.value; $("#rateVal").textContent = st.rate.toFixed(2); save(); };
