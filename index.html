@@ -1380,11 +1380,8 @@ let audioUnlocked = false;
 function unlockAudioAndMic(){
   if(audioUnlocked) return; audioUnlocked = true;
   try{ if(synth && IS_IOS && !speechUnlocked){ speechUnlocked = true; const u = new SpeechSynthesisUtterance(" "); u.volume = 0; synth.speak(u); } }catch(e){}
-  try{
-    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !IN_FRAME){
-      navigator.mediaDevices.getUserMedia({ audio:true }).then(s => setTimeout(() => s.getTracks().forEach(t => t.stop()), 300)).catch(() => {});
-    }
-  }catch(e){}
+  // (No early microphone request: an open mic can switch the computer's audio
+  // mode, e.g. Bluetooth headphones, and stall the teacher's voice.)
 }
 /* iPhone: unlock speech on the very first tap anywhere, so every Play button works. */
 let speechUnlocked = false;
