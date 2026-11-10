@@ -176,6 +176,15 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:18px 0}
 .feed .msg.them{padding-right:14px}
 .vk{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-size:12px;font-weight:700;margin-right:6px;color:#fff}
 .vk.good{background:var(--good)}.vk.close{background:var(--warn)}.vk.bad{background:var(--bad)}
+.fab{position:fixed;right:18px;bottom:18px;z-index:15;display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;background:var(--olive);color:#fff;font-weight:600;box-shadow:0 8px 24px rgba(28,34,48,.25)}
+.fab:hover{filter:brightness(1.07)}
+.askhist{display:flex;flex-direction:column;gap:8px;max-height:46vh;overflow:auto;margin:6px 0 12px;padding:2px}
+.askhist .msg{max-width:92%}
+.askhist .msg.me{text-align:left}
+.ask-row{display:flex;gap:8px;align-items:center}
+.ask-row input{flex:1}
+.mic.sm{width:56px;height:56px;flex:none}
+.mic.sm svg{width:24px;height:24px}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none}
 .toast.show{opacity:1}
 @media (max-width:520px){
@@ -198,6 +207,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:18px 0}
   <div id="banners"></div>
   <main id="app"></main>
 </div>
+<button class="fab" id="askFab" aria-label="Ask your teacher a question"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.8.9c0 1.6-2.3 2-2.3 3.4"/><circle cx="12" cy="16.6" r=".6" fill="currentColor"/></svg><span>Ask</span></button>
 <div id="modalRoot"></div>
 <div class="toast" id="toast"></div>
 
@@ -568,12 +578,12 @@ async function speakOnce(text, opts, last){
    SPEECH: recognition
    ========================================================= */
 let rec = null, listening = false;
-function listen(onInterim){
+function listen(onInterim, lang){
   return new Promise(resolve => {
     if(!SR){ resolve({ error:"unsupported", alts:[] }); return; }
     try{ synth && synth.cancel(); }catch(e){}
     const r = new SR(); rec = r;
-    r.lang = "he-IL"; r.interimResults = true; r.maxAlternatives = 5; r.continuous = false;
+    r.lang = lang || "he-IL"; r.interimResults = true; r.maxAlternatives = 5; r.continuous = false;
     let finals = [], err = null, gotFinal = false;
     const timer = setTimeout(() => { try{ r.stop(); }catch(e){} }, 9000);
     r.onresult = ev => {
@@ -1429,6 +1439,134 @@ function openDiag(){
   $("#dgEn").onclick = () => speak("Hello! This is your teacher.", { lang:"en" });
   $("#dgCopy").onclick = async () => { try{ await navigator.clipboard.writeText(info + "\n\n" + DBG.join("\n")); toast("Copied — paste it to Claude"); }catch(e){ toast("Couldn’t copy — take a screenshot instead"); } };
 }
+/* =========================================================
+   ASK THE TEACHER — free questions answered by Claude.
+   Needs the learner's own Anthropic API key, stored only in this browser.
+   ========================================================= */
+const KEY_STORE = "daber-anthropic-key";
+const ASK_MODEL = "claude-haiku-5-5";
+function getKey(){ try{ return localStorage.getItem(KEY_STORE) || ""; }catch(e){ return ""; } }
+function setKey(k){ try{ if(k) localStorage.setItem(KEY_STORE, k); else localStorage.removeItem(KEY_STORE); }catch(e){} }
+const ASK = { hist:[], lang:"en-US", busy:false };
+function askSystem(){
+  const g = female() ? "a woman (use feminine first-person forms)" : "a man (use masculine first-person forms)";
+  const done = LEVELS.filter((_,i) => levelDone(i)).map(l => l.title);
+  return `You are a warm, encouraging Hebrew teacher inside a speaking app. The learner (${esc(nameStr())}) is ${g}, lives in Israel, and wants to SPEAK everyday Israeli Hebrew, not write it. Levels finished so far: ${done.length ? done.join(", ") : "none yet, a beginner"}.
+Answer the learner's question the way a teacher talks out loud: short (under 70 words), friendly, practical, modern colloquial Hebrew as Israelis actually speak it. Prefer one clear phrase over lists. If they ask how to say something, give the most natural everyday phrase.
+Reply ONLY with JSON, no other text:
+{"say":[{"en":"English sentence"},{"he":"Hebrew without niqqud","tr":"transliteration with the stressed syllable in CAPS, syllables joined by hyphens, e.g. to-DA ra-BA","gloss":"short English meaning"}],"practice":{"he":"...","tr":"...","en":"..."} or null}
+"say" alternates English explanation and Hebrew items in the order they should be spoken. In "tr" keep exactly one space-separated chunk per Hebrew word. Put the single most useful phrase to repeat in "practice" (null if there is nothing to practise).`;
+}
+async function askClaude(question){
+  const key = getKey();
+  const msgs = [];
+  ASK.hist.filter(h => h.kind !== "err").slice(-8).forEach(h => msgs.push({ role: h.kind === "q" ? "user" : "assistant", content: h.raw }));
+  msgs.push({ role:"user", content: question });
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method:"POST",
+    headers:{ "content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+    body: JSON.stringify({ model: ASK_MODEL, max_tokens: 700, system: askSystem(), messages: msgs })
+  });
+  const data = await r.json().catch(() => ({}));
+  if(!r.ok){
+    const m = (data.error && data.error.message) || ("HTTP " + r.status);
+    throw new Error(r.status === 401 ? "That API key wasn’t accepted. Check it in Settings." : r.status === 429 ? "Too many questions at once. Wait a moment and try again." : /credit|billing/i.test(m) ? "Your Anthropic account has no credit left. Add some at console.anthropic.com." : m);
+  }
+  const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+  let parsed = null;
+  try{ const a = text.indexOf("{"), b = text.lastIndexOf("}"); parsed = JSON.parse(text.slice(a, b + 1)); }catch(e){}
+  if(!parsed || !Array.isArray(parsed.say)) parsed = { say:[{ en:text }], practice:null };
+  return { parsed, raw:text };
+}
+function openAsk(){
+  if(T && T.started && !T.paused && !T.done) tPause("Paused while you ask a question. Press Resume to carry on.");
+  try{ synth && synth.cancel(); }catch(e){}
+  renderAsk();
+}
+function renderAsk(){
+  const key = getKey();
+  const hist = ASK.hist.map(h => {
+    if(h.kind === "q") return `<div class="msg me"><div class="who">You</div>${esc(h.text)}</div>`;
+    if(h.kind === "err") return `<div class="msg teach" style="border-color:#e9b3aa"><div class="who">Teacher</div>${esc(h.text)}</div>`;
+    const pr = h.parsed.practice;
+    return `<div class="msg teach"><div class="who">Teacher <button data-replay="${h.i}" title="Hear again" style="color:var(--blue);vertical-align:middle">${ICON.spk}</button></div>${segsHTML(h.parsed.say.map(x => x.he ? { he:x.he, tr:x.tr||"", gloss:x.gloss } : { en:x.en||"" }))}
+      ${pr && pr.he ? `<div style="margin-top:8px"><button class="btn ghost small" data-practice="${h.i}">${ICON.mic.replace('width="34" height="34"','width="16" height="16"')} Practise: ${esc(pr.tr || pr.he)}</button></div>` : ""}</div>`;
+  }).join("");
+  const setup = !key ? `
+    <div class="banner info" style="margin-top:0"><b>One-time setup.</b> To answer any question, your teacher uses Claude through your own Anthropic API key. Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> → API keys → Create key, then paste it here. It’s saved only in this browser on this device. Each question costs a fraction of a cent.</div>
+    <div class="ask-row"><input type="text" id="keyIn" placeholder="sk-ant-…" autocomplete="off"><button class="btn primary" id="keySave">Save</button></div>` : "";
+  $("#modalRoot").innerHTML = `<div class="modal-bg" id="askbg"><div class="card modal" role="dialog" aria-label="Ask your teacher" style="max-width:600px">
+    <h2>Ask your teacher <button class="iconbtn" id="askClose" aria-label="Close">✕</button></h2>
+    ${setup}
+    ${key ? `<p style="margin:0 0 6px;color:var(--muted);font-size:14px">Ask anything out loud: “How do I say <i>I’m running late</i>?”, “What does <i>sababa</i> mean?”, “When do I use <i>todah</i> vs <i>todah rabah</i>?”</p>
+    <div class="askhist" id="askHist">${hist}</div>
+    <div class="seg" style="margin-bottom:10px;max-width:280px"><button data-al="en-US" class="${ASK.lang==="en-US"?"on":""}">I’ll ask in English</button><button data-al="he-IL" class="${ASK.lang==="he-IL"?"on":""}">בעברית</button></div>
+    <div class="ask-row">
+      <button class="mic sm" id="askMic" title="Ask out loud" ${ASK.busy?"disabled":""}>${ICON.mic}</button>
+      <input type="text" id="askIn" placeholder="…or type your question" ${ASK.busy?"disabled":""}>
+      <button class="btn primary" id="askSend" ${ASK.busy?"disabled":""}>${ASK.busy ? "Thinking…" : "Ask"}</button>
+    </div>
+    <div class="interim" id="askInterim" style="text-align:left"></div>` : ""}
+  </div></div>`;
+  const close = () => { stopListening(); try{ synth && synth.cancel(); }catch(e){} $("#modalRoot").innerHTML = ""; };
+  $("#askClose").onclick = close;
+  $("#askbg").onclick = e => { if(e.target.id === "askbg") close(); };
+  const ks = $("#keySave"); if(ks) ks.onclick = () => { const k = $("#keyIn").value.trim(); if(!/^sk-ant-/.test(k)){ toast("That doesn’t look like an Anthropic key (it starts with sk-ant-)"); return; } setKey(k); renderAsk(); };
+  const hEl = $("#askHist"); if(hEl) hEl.scrollTop = hEl.scrollHeight;
+  if(!key) return;
+  document.querySelectorAll("[data-al]").forEach(b => b.onclick = () => { ASK.lang = b.dataset.al; renderAsk(); });
+  const send = () => { const q = $("#askIn").value.trim(); if(q) doAsk(q); };
+  $("#askSend").onclick = send;
+  $("#askIn").onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); send(); } };
+  $("#askMic").onclick = async () => {
+    if(listening){ stopListening(); return; }
+    try{ synth && synth.cancel(); }catch(e){}
+    const m = $("#askMic"); m.classList.add("listening"); m.innerHTML = ICON.stop;
+    $("#askInterim").textContent = "Listening…";
+    const r = await listen(x => { const el = $("#askInterim"); if(el) el.textContent = x; }, ASK.lang);
+    const q = r.alts[0] || "";
+    if(!$("#askMic")) return;
+    if(q) doAsk(q); else { renderAsk(); const el = $("#askInterim"); if(el) el.textContent = errorText(r.error || "no-speech"); }
+  };
+  document.querySelectorAll("[data-replay]").forEach(b => b.onclick = () => speakAnswer(ASK.hist[+b.dataset.replay].parsed));
+  document.querySelectorAll("[data-practice]").forEach(b => b.onclick = () => practiceAnswer(ASK.hist[+b.dataset.practice].parsed.practice));
+}
+async function speakAnswer(parsed){
+  for(const x of parsed.say){
+    if(!$("#askHist")) return;
+    if(x.he) await speak(x.he); else if(x.en) for(const part of x.en.split(/(?<=[.!?])\s+/)){ if(!$("#askHist")) return; await speak(part, { lang:"en" }); }
+  }
+}
+async function doAsk(q){
+  if(ASK.busy) return;
+  ASK.busy = true; ASK.hist.push({ kind:"q", text:q, raw:q }); renderAsk();
+  try{
+    const { parsed, raw } = await askClaude(q);
+    ASK.hist.push({ kind:"a", parsed, raw, i: ASK.hist.length });
+    ASK.busy = false; renderAsk(); bumpStreak();
+    await speakAnswer(parsed);
+  }catch(e){
+    ASK.hist.push({ kind:"err", text: e.message || "Something went wrong. Check your connection and try again.", raw:"" });
+    ASK.busy = false; renderAsk();
+  }
+}
+async function practiceAnswer(pr){
+  if(!pr || !pr.he) return;
+  const box = $("#askInterim"); if(!box) return;
+  box.innerHTML = `Say: <b style="color:var(--blue)">${esc(pr.tr||"")}</b>`;
+  await speak(pr.he);
+  if(!$("#askInterim")) return;
+  $("#askInterim").innerHTML = `<span class="recdot" style="display:inline-block;vertical-align:middle;margin-right:6px"></span> Your turn — say it now`;
+  const r = await listen(x => { const el = $("#askInterim"); if(el) el.textContent = x; });
+  const el = $("#askInterim"); if(!el) return;
+  if(r.error && !r.alts.length){ el.textContent = errorText(r.error); return; }
+  const res = evaluate([pr.he], r.alts); stat(res);
+  el.innerHTML = feedbackHTML(res, pr.he, pr.tr || "");
+  if(res.verdict === "good"){ bumpStreak(); speak(pick(["Great!","Perfect.","Very good."]), { lang:"en" }); }
+  else { await speak("Listen again.", { lang:"en" }); await speak(pr.he, { slow:true }); }
+}
+$("#askFab").onclick = openAsk;
+
 function killTeacher(){ if(T){ T.id++; T = null; } try{ synth && synth.cancel(); }catch(e){} stopListening(); }
 function renderReviewTeacher(){
   app.innerHTML = `<div class="lesson-head"><button class="iconbtn" id="backBtn" aria-label="Back">${ICON.back}</button><div><h2>Daily review</h2><div class="he">חזרה יומית</div></div></div><div id="stageWrap"></div>`;
@@ -1465,6 +1603,7 @@ function openSettings(){
     <div class="field"><label class="l" for="voiceSel">Teacher voice</label><select id="voiceSel">${vopts(st.voiceURI || (heVoices[0]&&heVoices[0].voiceURI))}</select></div>
     <div class="field"><label class="l" for="pvoiceSel">Conversation partner voice</label><select id="pvoiceSel"><option value="">Auto — match the character</option>${heVoices.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI===st.partnerVoiceURI?"selected":""}>${esc(v.name)}</option>`).join("")}</select></div>
     <div class="field"><label class="l" for="enVoiceSel">Teacher’s English voice</label><select id="enVoiceSel">${enVoices.length ? enVoices.map(v => `<option value="${esc(v.voiceURI)}" ${v.voiceURI===(st.enVoiceURI || enVoices[0].voiceURI)?"selected":""}>${esc(v.name)}</option>`).join("") : "<option>No English voice found</option>"}</select><div class="row" style="margin-top:8px"><button class="btn ghost small" id="testVoice">Test voices</button><button class="btn ghost small" id="testMic">Test microphone</button></div></div>
+    <div class="field"><label class="l" for="keySet">Anthropic API key (for “Ask”)</label><input type="text" id="keySet" placeholder="sk-ant-…" value="${getKey() ? "••••••••" + esc(getKey().slice(-4)) : ""}" autocomplete="off"><div class="help">Saved only in this browser. Paste a new key to replace it, or clear the box to remove it.</div></div>
     <div class="field toggle"><div><label class="l" style="margin:0">Unlock all levels</label><div class="help">Jump ahead if you already know the basics.</div></div><button class="sw ${st.unlockAll?"on":""}" id="unSw" aria-label="Unlock all levels"></button></div>
     <hr class="sep">
     <div class="help" style="margin-bottom:10px">Accuracy so far: <b>${acc}%</b> over ${S.history.attempts} spoken attempts.</div>
@@ -1480,6 +1619,7 @@ function openSettings(){
   document.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { st.gender = b.dataset.g; save(); document.querySelectorAll("[data-g]").forEach(x => x.classList.toggle("on", x === b)); });
   $("#nameIn").oninput = e => { st.name = e.target.value; save(); };
   $("#heSw").onclick = e => { st.showHebrew = !st.showHebrew; e.currentTarget.classList.toggle("on", st.showHebrew); save(); };
+  $("#keySet").onchange = e => { const v = e.target.value.trim(); if(!v){ setKey(""); toast("API key removed"); } else if(/^sk-ant-/.test(v)){ setKey(v); toast("API key saved"); } };
   $("#unSw").onclick = e => { st.unlockAll = !st.unlockAll; e.currentTarget.classList.toggle("on", st.unlockAll); save(); };
   $("#rateIn").oninput = e => { st.rate = +e.target.value; $("#rateVal").textContent = st.rate.toFixed(2); save(); };
   $("#voiceSel").onchange = e => { st.voiceURI = e.target.value; save(); };
