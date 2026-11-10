@@ -492,7 +492,7 @@ function loadVoices(){
   if(!synth) return;
   voices = synth.getVoices();
   // Prefer natural-sounding voices, and a warm female voice for the teacher.
-  function score(v){ let s = 0; if(/natural|online|neural|premium|enhanced/i.test(v.name)) s += 3; if(/google/i.test(v.name)) s += 1; if(v.localService === false) s += 1; if(/en[-_]US/i.test(v.lang)) s += 1; if(isFemale(v)) s += 5; if(/^(ava|jenny|aria|emma)\b|microsoft (ava|jenny|aria|emma)/i.test(v.name)) s += 1; return s; }
+  function score(v){ let s = 0; if(/natural|online|neural|premium|enhanced/i.test(v.name)) s += 3; if(/google/i.test(v.name)) s -= 8; if(v.localService) s += 1; if(v.localService === false) s += 1; if(/en[-_]US/i.test(v.lang)) s += 1; if(isFemale(v)) s += 5; if(/^(ava|jenny|aria|emma)\b|microsoft (ava|jenny|aria|emma)/i.test(v.name)) s += 1; return s; }
   heVoices = voices.filter(v => /^(he|iw)([-_]|$)/i.test(v.lang)).sort((a,b) => score(b) - score(a));
   enVoices = voices.filter(v => /^en([-_]|$)/i.test(v.lang)).sort((a,b) => score(b) - score(a));
   renderBanners();
