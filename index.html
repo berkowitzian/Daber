@@ -510,8 +510,9 @@ function pickVoice(partner, g){
   if(g){ const m = heVoices.find(v => heGender(v) === g && v !== teacher) || heVoices.find(v => heGender(v) === g); if(m) return m; }
   return heVoices.find(v => v !== teacher) || teacher;
 }
-let voiceWarned = false, activeUtter = null;
+let voiceWarned = false, activeUtter = null, speechFails = 0;
 /* diagnostics log, shown under "Not working?" */
+const STUCK_MSG = "Your browser’s voice isn’t responding — it accepts each line but never starts speaking. <b>Quit the browser completely</b> (Cmd+Q on a Mac, not just closing the window) and open it again. If that doesn’t fix it, use <b>Safari</b> on a Mac, or <b>Microsoft Edge</b> on Windows.";
 const DBG = []; const T0 = Date.now();
 function dbg(m){ DBG.push(((Date.now()-T0)/1000).toFixed(1) + "s  " + m); if(DBG.length > 300) DBG.shift(); const el = document.getElementById("dbgLog"); if(el){ el.textContent = DBG.slice(-80).join("\n"); el.scrollTop = el.scrollHeight; } }
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -522,8 +523,9 @@ function voiceProblem(msg){
   toast("Audio isn’t playing. See the note at the top.");
 }
 async function speak(text, opts={}){
-  const ok = await speakOnce(text, opts, false);
-  if(ok === "nostart"){ try{ synth.cancel(); }catch(e){} await sleep(250); await speakOnce(text, opts, true); }
+  let ok = await speakOnce(text, opts, false);
+  if(ok === "nostart"){ try{ synth.cancel(); }catch(e){} await sleep(250); ok = await speakOnce(text, opts, true); }
+  speechFails = ok === "nostart" ? speechFails + 1 : 0;
 }
 async function speakOnce(text, opts, last){
   if(!synth){ voiceProblem("This browser has no speech support. Open the file in Microsoft Edge or Google Chrome."); return; }
@@ -557,7 +559,7 @@ async function speakOnce(text, opts, last){
     synth.speak(u);
     // Chrome stops long utterances after ~15s unless nudged.
     const keep = IS_IOS ? 0 : setInterval(() => { try{ if(synth.speaking && !u.__done){ synth.pause(); synth.resume(); } }catch(e){} }, 10000);
-    setTimeout(() => { if(!started && !done) dbg("⏱ not started after wait " + tag); if(!started && !done && !last){ done = true; u.__done = true; clearInterval(keep); resolve("nostart"); return; } if(!started && !done){ try{ synth.cancel(); }catch(e){} voiceProblem("Your browser didn’t start speaking" + (en ? "" : " Hebrew") + ". Check your volume and that this tab isn’t muted, then press <b>Again</b>. If it keeps happening, reload the page."); fin(); } }, IS_IOS ? 4500 : 2500);
+    setTimeout(() => { if(!started && !done) dbg("⏱ not started after wait " + tag); if(!started && !done && !last){ done = true; u.__done = true; clearInterval(keep); resolve("nostart"); return; } if(!started && !done){ try{ synth.cancel(); }catch(e){} voiceProblem(STUCK_MSG); done = true; u.__done = true; clearInterval(keep); resolve("nostart"); } }, IS_IOS ? 4500 : 2500);
     setTimeout(() => { if(!done) dbg("⏱ end never came, moving on " + tag); fin(); }, 3000 + clean.length * 220);
   });
 }
@@ -1120,6 +1122,7 @@ async function tSay(segs, id){
   for(const s of segs){
     if(s.en){ for(const part of s.en.split(/(?<=[.!?])\s+/)){ await speak(part, { lang:"en" }); chk(id); } }
     else { await speak(fill(s.he), { slow:s.slow, partner:s.partner, g:s.g }); chk(id); }
+    if(speechFails >= 2){ speechFails = 0; tPause("The voice isn’t playing in this browser. Quit it completely (Cmd+Q) and reopen, or use Safari. See the note at the top."); chk(id); }
   }
 }
 async function tHear(id){
