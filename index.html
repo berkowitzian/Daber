@@ -519,6 +519,10 @@ function voiceProblem(msg){
   toast("Audio isn’t playing. See the note at the top.");
 }
 async function speak(text, opts={}){
+  const ok = await speakOnce(text, opts, false);
+  if(ok === "nostart"){ try{ synth.cancel(); }catch(e){} await sleep(250); await speakOnce(text, opts, true); }
+}
+async function speakOnce(text, opts, last){
   if(!synth){ voiceProblem("This browser has no speech support. Open the file in Microsoft Edge or Google Chrome."); return; }
   if(!voices.length) loadVoices();
   const en = opts.lang === "en";
@@ -547,7 +551,7 @@ async function speak(text, opts={}){
     synth.speak(u);
     // Chrome stops long utterances after ~15s unless nudged.
     const keep = IS_IOS ? 0 : setInterval(() => { try{ if(synth.speaking && !u.__done){ synth.pause(); synth.resume(); } }catch(e){} }, 10000);
-    setTimeout(() => { if(!started && !done){ try{ synth.cancel(); }catch(e){} voiceProblem(en ? "Your browser didn’t start speaking. Make sure the tab isn’t muted and your volume is up, and open the downloaded file directly in Microsoft Edge or Chrome, not inside a preview window." : "Your browser didn’t start speaking Hebrew. Open the downloaded file directly in <b>Microsoft Edge</b>, not inside a preview window, and check that the tab isn’t muted."); fin(); } }, IS_IOS ? 4500 : 2500);
+    setTimeout(() => { if(!started && !done && !last){ done = true; u.__done = true; clearInterval(keep); resolve("nostart"); return; } if(!started && !done){ try{ synth.cancel(); }catch(e){} voiceProblem("Your browser didn’t start speaking" + (en ? "" : " Hebrew") + ". Check your volume and that this tab isn’t muted, then press <b>Again</b>. If it keeps happening, reload the page."); fin(); } }, IS_IOS ? 4500 : 2500);
     setTimeout(fin, 3000 + clean.length * 220);
   });
 }
@@ -1375,7 +1379,7 @@ async function micTest(){
 let audioUnlocked = false;
 function unlockAudioAndMic(){
   if(audioUnlocked) return; audioUnlocked = true;
-  try{ if(synth){ const u = new SpeechSynthesisUtterance(" "); u.volume = 0; synth.speak(u); } }catch(e){}
+  try{ if(synth && IS_IOS && !speechUnlocked){ speechUnlocked = true; const u = new SpeechSynthesisUtterance(" "); u.volume = 0; synth.speak(u); } }catch(e){}
   try{
     if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !IN_FRAME){
       navigator.mediaDevices.getUserMedia({ audio:true }).then(s => setTimeout(() => s.getTracks().forEach(t => t.stop()), 300)).catch(() => {});
@@ -1385,7 +1389,7 @@ function unlockAudioAndMic(){
 /* iPhone: unlock speech on the very first tap anywhere, so every Play button works. */
 let speechUnlocked = false;
 function unlockSpeechOnce(){
-  if(speechUnlocked || !synth) return; speechUnlocked = true;
+  if(speechUnlocked || !synth || !IS_IOS) return; speechUnlocked = true;
   try{ const u = new SpeechSynthesisUtterance(" "); u.volume = 0; synth.speak(u); }catch(e){}
 }
 document.addEventListener("touchend", unlockSpeechOnce, { capture:true });
