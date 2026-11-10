@@ -511,6 +511,9 @@ function pickVoice(partner, g){
   return heVoices.find(v => v !== teacher) || teacher;
 }
 let voiceWarned = false, activeUtter = null;
+/* diagnostics log, shown under "Not working?" */
+const DBG = []; const T0 = Date.now();
+function dbg(m){ DBG.push(((Date.now()-T0)/1000).toFixed(1) + "s  " + m); if(DBG.length > 300) DBG.shift(); const el = document.getElementById("dbgLog"); if(el){ el.textContent = DBG.slice(-80).join("\n"); el.scrollTop = el.scrollHeight; } }
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 function voiceProblem(msg){
   if(voiceWarned) return; voiceWarned = true;
@@ -545,14 +548,17 @@ async function speakOnce(text, opts, last){
     if(en) u.pitch = 1.05;
     let done = false, started = false;
     const fin = () => { if(!done){ done = true; u.__done = true; clearInterval(keep); resolve(); } };
-    u.onstart = () => { started = true; };
-    u.onend = fin; u.onerror = fin;
+    const tag = (v ? v.name : "default") + ' "' + clean.slice(0,28) + '"';
+    u.onstart = () => { started = true; dbg("▶ start " + tag); };
+    u.onend = () => { dbg("■ end " + tag); fin(); };
+    u.onerror = e => { dbg("✗ error " + (e && e.error) + " " + tag); fin(); };
+    dbg("speak " + tag + (last ? " (retry)" : "") + " speaking=" + synth.speaking + " pending=" + synth.pending + " paused=" + synth.paused);
     currentUtter = u; activeUtter = u;
     synth.speak(u);
     // Chrome stops long utterances after ~15s unless nudged.
     const keep = IS_IOS ? 0 : setInterval(() => { try{ if(synth.speaking && !u.__done){ synth.pause(); synth.resume(); } }catch(e){} }, 10000);
-    setTimeout(() => { if(!started && !done && !last){ done = true; u.__done = true; clearInterval(keep); resolve("nostart"); return; } if(!started && !done){ try{ synth.cancel(); }catch(e){} voiceProblem("Your browser didn’t start speaking" + (en ? "" : " Hebrew") + ". Check your volume and that this tab isn’t muted, then press <b>Again</b>. If it keeps happening, reload the page."); fin(); } }, IS_IOS ? 4500 : 2500);
-    setTimeout(fin, 3000 + clean.length * 220);
+    setTimeout(() => { if(!started && !done) dbg("⏱ not started after wait " + tag); if(!started && !done && !last){ done = true; u.__done = true; clearInterval(keep); resolve("nostart"); return; } if(!started && !done){ try{ synth.cancel(); }catch(e){} voiceProblem("Your browser didn’t start speaking" + (en ? "" : " Hebrew") + ". Check your volume and that this tab isn’t muted, then press <b>Again</b>. If it keeps happening, reload the page."); fin(); } }, IS_IOS ? 4500 : 2500);
+    setTimeout(() => { if(!done) dbg("⏱ end never came, moving on " + tag); fin(); }, 3000 + clean.length * 220);
   });
 }
 
@@ -577,9 +583,12 @@ function listen(onInterim){
       }
       if(onInterim) onInterim(interim || (finals[0]||""));
     };
-    r.onerror = e => { err = e.error; };
-    r.onend = () => { clearTimeout(timer); listening = false; rec = null; resolve({ error: gotFinal ? null : (err || "no-speech"), alts: finals }); };
-    try{ r.start(); listening = true; }catch(e){ clearTimeout(timer); resolve({ error:"start-failed", alts:[] }); }
+    r.onerror = e => { err = e.error; dbg("mic error: " + e.error); };
+    r.onstart = () => dbg("mic listening");
+    r.onaudiostart = () => dbg("mic audio started");
+    r.onspeechstart = () => dbg("mic heard speech");
+    r.onend = () => { dbg("mic stopped; heard: " + (finals[0] || "(nothing)")); clearTimeout(timer); listening = false; rec = null; resolve({ error: gotFinal ? null : (err || "no-speech"), alts: finals }); };
+    try{ r.start(); listening = true; dbg("mic start requested"); }catch(e){ dbg("mic start failed: " + e.message); clearTimeout(timer); resolve({ error:"start-failed", alts:[] }); }
   });
 }
 function stopListening(){ try{ rec && rec.stop(); }catch(e){} }
@@ -1296,6 +1305,7 @@ function renderTeacher(box){
         <button class="btn primary" id="pauseBtn" title="Pause / resume (Space)"></button>
         <button class="btn ghost" id="skipBtn2" title="Skip this step">Skip</button>
       </div>
+      <div style="text-align:center;margin:-6px 0 10px"><button class="btn ghost small" id="dbgBtn" style="border:none;color:var(--muted);text-decoration:underline">Not working?</button></div>
       <div id="tdone" style="margin-bottom:14px"></div>
       <div class="feed" id="feed">${T.log.map(bubbleHTML).join("")}</div>
     </div>`;
@@ -1304,6 +1314,7 @@ function renderTeacher(box){
   const tb = $("#tBegin"); if(tb) tb.onclick = () => go1(0);
   const tc = $("#tContinue"); if(tc) tc.onclick = () => go1(T.resumeAt);
   const tm = $("#tMicTest"); if(tm) tm.onclick = micTest;
+  $("#dbgBtn").onclick = openDiag;
   $("#pauseBtn").onclick = () => { if(T.done) return; if(T.paused){ unlockAudioAndMic(); tResume(); } else tPause("Paused. Press Resume to carry on."); };
   $("#replayBtn").onclick = tRestartBeat;
   $("#skipBtn2").onclick = tSkip;
@@ -1391,6 +1402,30 @@ function unlockSpeechOnce(){
 }
 document.addEventListener("touchend", unlockSpeechOnce, { capture:true });
 document.addEventListener("click", unlockSpeechOnce, { capture:true });
+function openDiag(){
+  const ua = navigator.userAgent.replace(/^Mozilla\/5.0 /,"");
+  const info = [
+    "Browser: " + ua,
+    "Speech out: " + (synth ? "yes" : "NO") + " · voices " + voices.length + " · Hebrew: " + (heVoices.map(v=>v.name).join(", ") || "NONE") ,
+    "Teacher voices: he=" + ((pickVoice(false)||{}).name||"none") + " · en=" + ((pickEn()||{}).name||"none"),
+    "Speech in (mic): " + (SR ? "yes" : "NO") + " · page " + location.protocol + (IN_FRAME ? " · INSIDE A FRAME" : ""),
+    "Lesson: " + (T ? ("step " + T.i + "/" + T.beats.length + " · " + T.status + (T.msg ? " · " + T.msg : "")) : "not started")
+  ].join("\n");
+  $("#modalRoot").innerHTML = `<div class="modal-bg" id="dgbg"><div class="card modal" role="dialog" aria-label="Diagnostics" style="max-width:640px">
+    <h2>What’s happening <button class="iconbtn" id="dgClose" aria-label="Close">✕</button></h2>
+    <p style="margin:0 0 10px;color:var(--muted);font-size:14px">Take a screenshot of this panel and send it to Claude. You can leave it open while the lesson runs.</p>
+    <pre style="white-space:pre-wrap;font-size:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;margin:0 0 10px">${esc(info)}</pre>
+    <pre id="dbgLog" style="white-space:pre-wrap;font-size:12px;background:#1c2230;color:#e9edf5;border-radius:10px;padding:10px;height:260px;overflow:auto;margin:0"></pre>
+    <div class="row" style="justify-content:flex-end;margin-top:10px">
+      <button class="btn ghost small" id="dgHe">Test Hebrew voice</button><button class="btn ghost small" id="dgEn">Test English voice</button><button class="btn ghost small" id="dgCopy">Copy log</button><button class="btn primary small" id="dgDone">Close</button>
+    </div></div></div>`;
+  dbg("— diagnostics opened —");
+  const close = () => { $("#modalRoot").innerHTML = ""; };
+  $("#dgClose").onclick = close; $("#dgDone").onclick = close;
+  $("#dgHe").onclick = () => speak("שלום, מה נשמע?");
+  $("#dgEn").onclick = () => speak("Hello! This is your teacher.", { lang:"en" });
+  $("#dgCopy").onclick = async () => { try{ await navigator.clipboard.writeText(info + "\n\n" + DBG.join("\n")); toast("Copied — paste it to Claude"); }catch(e){ toast("Couldn’t copy — take a screenshot instead"); } };
+}
 function killTeacher(){ if(T){ T.id++; T = null; } try{ synth && synth.cancel(); }catch(e){} stopListening(); }
 function renderReviewTeacher(){
   app.innerHTML = `<div class="lesson-head"><button class="iconbtn" id="backBtn" aria-label="Back">${ICON.back}</button><div><h2>Daily review</h2><div class="he">חזרה יומית</div></div></div><div id="stageWrap"></div>`;
