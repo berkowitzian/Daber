@@ -1679,7 +1679,7 @@ function liveAdd(who, text){
   if(LV.cur && LV.cur.who === who){ LV.cur.text += text; }
   else { LV.cur = { who, text }; LV.log.push(LV.cur); }
   const f = $("#lvFeed"); if(!f) return;
-  f.innerHTML = LV.log.map(m => `<div class="msg ${m.who === "me" ? "me" : "teach"}" style="${m.who==="me"?"text-align:left":""}"><div class="who">${m.who === "me" ? "You" : "Teacher"}</div><span ${/[֐-׿]/.test(m.text) ? 'dir="auto"' : ""}>${esc(m.text.trim())}</span></div>`).join("");
+  f.innerHTML = LV.log.map(m => `<div class="msg ${m.who === "me" ? "me" : "teach"}" style="${m.who==="me"?"text-align:left":""}"><div class="who">${m.who === "me" ? "You" : "Teacher"}</div><div dir="auto" style="unicode-bidi:plaintext">${esc(m.text.trim())}</div></div>`).join("");
   f.scrollTop = f.scrollHeight;
 }
 
@@ -1787,7 +1787,7 @@ function renderLive(){
   document.querySelectorAll("[data-lm]").forEach(b => b.onclick = () => { if(LV.mode === b.dataset.lm) return; LV.mode = b.dataset.lm; const was = LV.state === "listening" || LV.state === "speaking"; if(was) liveStop(); renderLive(); if(was) toast("Mode changed — tap Start to begin again"); });
   $("#lvStart").onclick = liveStart;
   $("#lvMute").onclick = () => { LV.muted = !LV.muted; liveSet(LV.state); };
-  liveAdd("", ""); const f = $("#lvFeed"); if(f){ f.innerHTML = LV.log.map(m => `<div class="msg ${m.who === "me" ? "me" : "teach"}" style="${m.who==="me"?"text-align:left":""}"><div class="who">${m.who === "me" ? "You" : "Teacher"}</div><span dir="auto">${esc(m.text.trim())}</span></div>`).join(""); f.scrollTop = f.scrollHeight; }
+  liveAdd("", ""); const f = $("#lvFeed"); if(f){ f.innerHTML = LV.log.map(m => `<div class="msg ${m.who === "me" ? "me" : "teach"}" style="${m.who==="me"?"text-align:left":""}"><div class="who">${m.who === "me" ? "You" : "Teacher"}</div><div dir="auto" style="unicode-bidi:plaintext">${esc(m.text.trim())}</div></div>`).join(""); f.scrollTop = f.scrollHeight; }
   liveSet(LV.state);
 }
 
